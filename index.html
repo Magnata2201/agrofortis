@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agrofortis - Login</title>
+    
+    <!-- BLINDAGEM NUCLEAR DO LOGIN -->
+    <script>
+        function blindagemLogin() {
+            if (localStorage.getItem('agrofortis_auth') === 'true') {
+                document.documentElement.style.display = 'none';
+                window.location.replace('sistema.html');
+            }
+        }
+        blindagemLogin();
+        setInterval(blindagemLogin, 500);
+
+        window.history.pushState(null, null, window.location.href);
+        window.addEventListener('popstate', function () {
+            window.history.pushState(null, null, window.location.href);
+        });
+    </script>
+
+    <!-- Tailwind CSS e Phosphor Icons -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: { extend: { colors: { agro: { 500: '#16a34a', 600: '#15803d', 700: '#115e59' } } } }
+        }
+    </script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center relative font-sans p-4">
+
+    <div class="fixed inset-0 z-0 bg-[url('https://images.unsplash.com/photo-1625246333195-78d9c38ad449?q=80&w=1920&auto=format&fit=crop')] bg-cover bg-center">
+        <div class="absolute inset-0 bg-green-950/90 backdrop-blur-sm"></div>
+    </div>
+
+    <main class="z-10 w-full max-w-md flex flex-col items-center">
+        <div class="flex items-center gap-3 mb-8">
+            <div class="bg-white/10 p-4 rounded-2xl border border-white/20 shadow-xl backdrop-blur-md">
+                <i class="ph-fill ph-plant text-5xl text-agro-500"></i>
+            </div>
+            <h1 class="text-4xl font-bold tracking-wide text-white">Agro<span class="text-agro-500">fortis</span></h1>
+        </div>
+
+        <div class="bg-white w-full rounded-3xl shadow-2xl p-8 border border-gray-100 relative">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl font-bold text-gray-800">Acesso ao Sistema</h2>
+                <p class="text-gray-500 text-sm mt-2">Insira as suas credenciais para continuar.</p>
+            </div>
+
+            <!-- Div para mensagens (Erro ou Configuração Pendente) -->
+            <div id="msgAlerta" class="hidden bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl p-3 mb-6 flex items-center gap-2">
+                <i class="ph-fill ph-warning-circle text-lg shrink-0"></i>
+                <span id="textoMsgAlerta">Utilizador ou senha incorretos.</span>
+            </div>
+
+            <form id="formLogin" class="flex flex-col gap-5">
+                <div>
+                    <label class="block text-gray-600 text-sm font-semibold mb-2">Utilizador / E-mail</label>
+                    <div class="relative">
+                        <i class="ph ph-user absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
+                        <input type="text" id="inputUsuario" placeholder="Digite o login ou e-mail" class="w-full bg-gray-50 border border-gray-200 text-gray-700 rounded-xl pl-12 pr-4 py-3 focus:outline-none focus:border-agro-500 font-medium" required>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-gray-600 text-sm font-semibold mb-2">Senha</label>
+                    <div class="relative">
+                        <i class="ph ph-lock-key absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
+                        <input type="password" id="inputSenha" placeholder="Digite a senha" class="w-full bg-gray-50 border border-gray-200 text-gray-700 rounded-xl pl-12 pr-12 py-3 focus:outline-none focus:border-agro-500 font-medium" required>
+                        <button type="button" id="btnToggleSenha" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none">
+                            <i class="ph ph-eye text-lg" id="iconeOlho"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" id="btnEntrar" class="w-full bg-agro-600 hover:bg-agro-500 text-white font-bold py-3.5 px-4 rounded-xl transition-all duration-300 mt-2 shadow-lg shadow-agro-500/30 flex items-center justify-center gap-2 group">
+                    <span id="textoBtnEntrar">Entrar no Sistema</span> <i class="ph-bold ph-sign-in group-hover:translate-x-1 transition-transform" id="iconeBtnEntrar"></i>
+                </button>
+            </form>
+            
+            <button id="btnDev" class="mt-6 text-gray-400 hover:text-gray-600 text-xs flex justify-center w-full items-center gap-1 transition-colors">
+                <i class="ph-fill ph-gear"></i> Configurações de Banco de Dados
+            </button>
+        </div>
+    </main>
+
+    <!-- Modal de Senha Dev -->
+    <div id="modalSenha" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+        <div class="bg-white border border-gray-100 rounded-2xl p-8 w-full max-w-sm shadow-2xl transform transition-all relative">
+            <button id="closeSenha" class="absolute top-4 right-4 text-gray-400 hover:text-red-500"><i class="ph ph-x text-xl"></i></button>
+            <div class="flex flex-col items-center text-center">
+                <div class="bg-gray-100 p-3 rounded-full text-gray-700 mb-4"><i class="ph-fill ph-lock-key text-3xl"></i></div>
+                <h3 class="text-xl font-bold text-gray-800 mb-2">Acesso Restrito</h3>
+                <p class="text-gray-500 text-sm mb-6">Insira a senha de desenvolvedor.</p>
+                <input type="password" id="inputSenhaDev" placeholder="Digite a senha" class="w-full bg-gray-50 border border-gray-200 text-gray-800 rounded-lg px-4 py-3 mb-4 focus:outline-none focus:border-gray-500 transition-all text-center tracking-widest">
+                <p id="erroSenhaDev" class="text-red-500 text-sm mb-4 hidden">Senha incorreta.</p>
+                <button id="btnConfirmarSenhaDev" class="w-full bg-gray-800 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">Desbloquear</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal DB Config -->
+    <div id="modalDb" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+        <div class="bg-white border border-gray-100 rounded-2xl p-8 w-full max-w-2xl shadow-2xl transform transition-all relative max-h-[90vh] overflow-y-auto">
+            <button id="closeDb" class="absolute top-4 right-4 text-gray-400 hover:text-red-500"><i class="ph ph-x text-xl"></i></button>
+            <div class="flex items-center gap-3 mb-6">
+                <i class="ph-fill ph-database text-3xl text-agro-500"></i>
+                <h3 class="text-2xl font-bold text-gray-800">Cluster Firebase - Agrofortis</h3>
+            </div>
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-6">
+                <p class="text-blue-800 text-sm mb-2"><i class="ph-fill ph-info text-blue-600 mr-1"></i> Adicione as chaves JSON do Firebase para conectar o login.</p>
+            </div>
+            <div class="mb-6">
+                <label class="block text-gray-600 text-sm font-semibold mb-2">Cole o JSON de configuração:</label>
+                <textarea id="jsonInput" rows="5" placeholder='{"apiKey": "...", "projectId": "..."}' class="w-full bg-gray-50 border border-gray-200 text-gray-800 font-mono text-sm rounded-lg px-4 py-3 mb-3 focus:outline-none focus:border-agro-500"></textarea>
+                <button id="btnAddDb" class="bg-gray-800 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors flex items-center gap-2"><i class="ph-bold ph-plus"></i> Adicionar Banco</button>
+            </div>
+            <div>
+                <h4 class="text-gray-600 text-sm font-semibold mb-3 uppercase tracking-wide border-b border-gray-200 pb-2">Bancos Ativos</h4>
+                <ul id="dbList" class="flex flex-col gap-2"><li class="text-gray-400 text-sm italic py-2" id="emptyState">Nenhum banco configurado.</li></ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        let db = null;
+        const formLogin = document.getElementById('formLogin');
+        const inputUsuario = document.getElementById('inputUsuario');
+        const inputSenha = document.getElementById('inputSenha');
+        const msgAlerta = document.getElementById('msgAlerta');
+        const textoMsgAlerta = document.getElementById('textoMsgAlerta');
+        const btnToggleSenha = document.getElementById('btnToggleSenha');
+        const iconeOlho = document.getElementById('iconeOlho');
+        const btnEntrar = document.getElementById('btnEntrar');
+        const textoBtnEntrar = document.getElementById('textoBtnEntrar');
+        const iconeBtnEntrar = document.getElementById('iconeBtnEntrar');
+
+        // Lógica de visualização de senha
+        btnToggleSenha.addEventListener('click', () => {
+            if (inputSenha.type === 'password') {
+                inputSenha.type = 'text';
+                iconeOlho.classList.replace('ph-eye', 'ph-eye-slash');
+            } else {
+                inputSenha.type = 'password';
+                iconeOlho.classList.replace('ph-eye-slash', 'ph-eye');
+            }
+        });
+
+        // Inicializa o Firebase recuperando a chave do LocalStorage
+        function inicializarFirebase() {
+            const clustersSalvos = localStorage.getItem('agrofortis_firebase_clusters');
+            if (clustersSalvos) {
+                const arr = JSON.parse(clustersSalvos);
+                if (arr.length > 0) {
+                    try {
+                        firebase.initializeApp(arr[0]);
+                        db = firebase.firestore();
+                        msgAlerta.classList.add('hidden');
+                        return;
+                    } catch (error) {
+                        console.error("Erro ao inicializar Firebase", error);
+                    }
+                }
+            }
+            // Se chegou aqui, não tem banco configurado
+            mostrarAlerta("Sistema não configurado. Banco de dados offline.", "bg-yellow-50", "border-yellow-200", "text-yellow-700");
+        }
+        window.onload = inicializarFirebase;
+
+        function mostrarAlerta(mensagem, bgColor = "bg-red-50", borderColor = "border-red-200", textColor = "text-red-600") {
+            msgAlerta.className = `border rounded-xl p-3 mb-6 flex items-center gap-2 ${bgColor} ${borderColor}${textColor}`;
+            textoMsgAlerta.innerText = mensagem;
+            msgAlerta.classList.remove('hidden');
+            msgAlerta.classList.add('animate-pulse');
+            setTimeout(() => msgAlerta.classList.remove('animate-pulse'), 500);
+        }
+
+        formLogin.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const usuarioEmail = inputUsuario.value.trim().toLowerCase();
+            const senhaDigitada = inputSenha.value.trim();
+
+            if (!db) {
+                mostrarAlerta("Banco de dados não configurado. Acesse a engrenagem.", "bg-yellow-50", "border-yellow-200", "text-yellow-700");
+                return;
+            }
+
+            // Permite que o admin master original (Hardcoded) ainda entre em casos de emergência
+// Permite que o admin master original (Hardcoded) ainda entre em casos de emergência
+            if (usuarioEmail === 'admin' && senhaDigitada === '1996') {
+                localStorage.setItem('agrofortis_auth', 'true');
+                localStorage.setItem('agrofortis_user_name', 'Administrador Master');
+                localStorage.setItem('agrofortis_user_perms', JSON.stringify({
+                    clientes: true, produtores: true, cargas: true, descargas: true, relatorios: true, usuarios: true
+                }));
+                window.location.replace('sistema.html');
+                return;
+            }
+
+            // Inicia o processo de verificação no banco
+            textoBtnEntrar.innerText = "Autenticando...";
+            iconeBtnEntrar.className = "ph-bold ph-spinner animate-spin";
+            btnEntrar.disabled = true;
+            btnEntrar.classList.replace('bg-agro-600', 'bg-gray-400');
+
+            try {
+                // Busca o usuário cujo email bate com o input
+                const snapshot = await db.collection("usuarios").where("email", "==", usuarioEmail).get();
+                
+                if (snapshot.empty) {
+                    mostrarAlerta("Utilizador ou senha incorretos.");
+                    inputSenha.value = '';
+                    inputSenha.focus();
+                } else {
+                    let logado = false;
+                    snapshot.forEach(doc => {
+                        const dadosUsuario = doc.data();
+                        if (dadosUsuario.senha === senhaDigitada) {
+                            // Login Sucesso
+                            logado = true;
+                            localStorage.setItem('agrofortis_auth', 'true');
+                            localStorage.setItem('agrofortis_user_name', dadosUsuario.nome);
+                            // Salva as permissões do usuário logado
+                            localStorage.setItem('agrofortis_user_perms', JSON.stringify(dadosUsuario.permissoes || {}));
+                            window.location.replace('sistema.html');
+                        }
+                    });
+
+                    if (!logado) {
+                        mostrarAlerta("Utilizador ou senha incorretos.");
+                        inputSenha.value = '';
+                        inputSenha.focus();
+                    }
+                }
+            } catch (error) {
+                console.error(error);
+                mostrarAlerta("Erro de conexão. Verifique sua internet.");
+            } finally {
+                if(!localStorage.getItem('agrofortis_auth')) {
+                    textoBtnEntrar.innerText = "Entrar no Sistema";
+                    iconeBtnEntrar.className = "ph-bold ph-sign-in group-hover:translate-x-1 transition-transform";
+                    btnEntrar.disabled = false;
+                    btnEntrar.classList.replace('bg-gray-400', 'bg-agro-600');
+                }
+            }
+        });
+
+        // Limpa erro ao digitar
+        inputUsuario.addEventListener('input', () => msgAlerta.classList.add('hidden'));
+        inputSenha.addEventListener('input', () => msgAlerta.classList.add('hidden'));
+
+        // ==========================================
+        // LÓGICA DO MODAL DE CONFIGURAÇÃO DEV
+        // ==========================================
+        const btnDev = document.getElementById('btnDev');
+        const modalSenha = document.getElementById('modalSenha');
+        const modalDb = document.getElementById('modalDb');
+        const inputSenhaDev = document.getElementById('inputSenhaDev');
+        const erroSenhaDev = document.getElementById('erroSenhaDev');
+        const jsonInput = document.getElementById('jsonInput');
+        const dbList = document.getElementById('dbList');
+        const emptyState = document.getElementById('emptyState');
+        let firebaseClusters = JSON.parse(localStorage.getItem('agrofortis_firebase_clusters')) || [];
+
+        function salvarClustersNoStorage() { localStorage.setItem('agrofortis_firebase_clusters', JSON.stringify(firebaseClusters)); }
+
+        btnDev.addEventListener('click', () => {
+            modalSenha.classList.remove('hidden'); inputSenhaDev.value = ''; erroSenhaDev.classList.add('hidden'); setTimeout(() => inputSenhaDev.focus(), 100);
+        });
+
+        document.getElementById('closeSenha').addEventListener('click', () => modalSenha.classList.add('hidden'));
+        document.getElementById('closeDb').addEventListener('click', () => { modalDb.classList.add('hidden'); window.location.reload(); });
+
+        document.getElementById('btnConfirmarSenhaDev').addEventListener('click', verificarSenhaDev);
+        inputSenhaDev.addEventListener('keypress', (e) => { if (e.key === 'Enter') verificarSenhaDev(); });
+        inputSenhaDev.addEventListener('input', () => { erroSenhaDev.classList.add('hidden'); inputSenhaDev.classList.remove('border-red-500'); });
+
+        function verificarSenhaDev() {
+            if (inputSenhaDev.value === '22011996') {
+                modalSenha.classList.add('hidden'); modalDb.classList.remove('hidden'); atualizarListaBancos();
+            } else {
+                erroSenhaDev.classList.remove('hidden'); inputSenhaDev.classList.add('border-red-500');
+            }
+        }
+
+        document.getElementById('btnAddDb').addEventListener('click', () => {
+            const rawJson = jsonInput.value.trim(); if (!rawJson) return;
+            try {
+                const config = JSON.parse(rawJson);
+                if (!config.projectId) { alert("JSON não válido."); return; }
+                firebaseClusters.push(config); salvarClustersNoStorage(); jsonInput.value = ''; atualizarListaBancos();
+            } catch (error) { alert("Erro de sintaxe no JSON."); }
+        });
+
+        function atualizarListaBancos() {
+            emptyState.style.display = firebaseClusters.length > 0 ? 'none' : 'block';
+            dbList.innerHTML = '';
+            firebaseClusters.forEach((dbItem, index) => {
+                const li = document.createElement('li');
+                li.className = "flex items-center justify-between bg-gray-50 border border-gray-200 p-3 rounded-lg";
+                li.innerHTML = `
+                    <div class="flex items-center gap-3"><div class="bg-white p-2 rounded text-gray-500 font-bold text-xs border border-gray-200">#${index + 1}</div><div><span class="block text-gray-700 font-semibold">${dbItem.projectId}</span></div></div>
+                    <button onclick="removerBanco(${index})" class="text-red-500 hover:bg-red-50 p-2 rounded"><i class="ph-bold ph-trash"></i></button>
+                `;
+                dbList.appendChild(li);
+            });
+        }
+        window.removerBanco = function(index) { firebaseClusters.splice(index, 1); salvarClustersNoStorage(); atualizarListaBancos(); }
+    </script>
+</body>
+</html>
