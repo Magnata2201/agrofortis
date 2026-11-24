@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agrofortis - Inspeção de Descarga (QC)</title>
+    
+    <!-- BLINDAGEM NUCLEAR PARA PÁGINAS PROTEGIDAS -->
+    <script>
+        function blindagemTotal() {
+            const auth = localStorage.getItem('agrofortis_auth');
+            const perms = JSON.parse(localStorage.getItem('agrofortis_user_perms') || '{}');
+            if (auth !== 'true') {
+                document.documentElement.style.display = 'none';
+                window.location.replace('index.html');
+            } else if (perms.descargas !== true) {
+                document.documentElement.style.display = 'none';
+                window.location.replace('sistema.html');
+            }
+        }
+        blindagemTotal();
+        setInterval(blindagemTotal, 500);
+
+        window.history.pushState(null, null, window.location.href);
+        window.addEventListener('popstate', function () { window.history.go(1); });
+    </script>
+
+    <!-- Bibliotecas -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <script>
+        tailwind.config = { theme: { extend: { colors: { agro: { 500: '#16a34a', 600: '#15803d', 700: '#115e59' } } } } }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen relative font-sans">
+
+    <div class="no-print w-full min-h-screen flex flex-col items-center p-4">
+        
+        <div class="fixed inset-0 z-0 bg-[url('https://images.unsplash.com/photo-1625246333195-78d9c38ad449?q=80&w=1920&auto=format&fit=crop')] bg-cover bg-center">
+            <div class="absolute inset-0 bg-green-950/90 backdrop-blur-sm"></div>
+        </div>
+
+        <main class="z-10 w-full max-w-6xl flex flex-col items-center my-4">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="bg-white/10 p-3 rounded-xl border border-white/20 shadow-lg backdrop-blur-md">
+                    <i class="ph-fill ph-clipboard-text text-4xl text-agro-500"></i>
+                </div>
+                <h1 class="text-3xl font-bold tracking-wide text-white">Agro<span class="text-agro-500">fortis</span></h1>
+            </div>
+
+            <div class="bg-white w-full rounded-3xl shadow-2xl p-6 md:p-8 border border-gray-100 relative mb-8">
+                
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-gray-100 pb-5 mb-6 gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                            <i class="ph-fill ph-magnifying-glass text-blue-600"></i> Inspeção de Descarga (QC)
+                        </h2>
+                        <p class="text-gray-500 text-sm mt-1">Gere laudos de qualidade detalhados com fotos ilimitadas da carga.</p>
+                    </div>
+                    <button type="button" onclick="abrirModalHistorico()" class="bg-gray-800 hover:bg-gray-700 text-white text-sm font-semibold py-2.5 px-5 rounded-xl flex items-center gap-2 shadow-md transition-colors">
+                        <i class="ph-bold ph-list-dashes text-blue-400"></i> Histórico e Laudos Salvos
+                    </button>
+                </div>
+
+                <form id="formQC" class="flex flex-col gap-6">
+                    <input type="hidden" id="qcIdEmEdicao" value="">
+                    
+                    <!-- FOTOS DA CARGA (Upload Multiplo) -->
+                    <div class="bg-gray-50 p-5 rounded-2xl border border-gray-200">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-sm font-black text-gray-700 uppercase flex items-center gap-2"><i class="ph-bold ph-camera text-gray-600"></i> Registro Fotográfico</h3>
+                            <label for="qcUploadFotosMulti" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold py-2 px-4 rounded-lg cursor-pointer flex items-center gap-2 shadow-sm transition-colors">
+                                <i class="ph-bold ph-plus-circle"></i> Adicionar Fotos
+                            </label>
+                            <input id="qcUploadFotosMulti" type="file" accept="image/*" multiple class="hidden" onchange="processarFotosMulti(event)" />
+                        </div>
+                        
+                        <div id="containerGaleria" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                            <div id="avisoSemFotos" class="col-span-full text-center py-6 text-gray-400 text-sm italic border-2 border-dashed border-gray-300 rounded-xl">
+                                Nenhuma foto adicionada à inspeção.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bloco 1: Informações Básicas e Logística -->
+                    <div class="bg-gray-50 p-5 rounded-2xl border border-gray-200">
+                        <h3 class="text-sm font-black text-gray-700 uppercase mb-4 flex items-center gap-2"><i class="ph-bold ph-truck text-agro-600"></i> 1. Logística e Operação</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                            <div><label class="block text-xs font-bold text-gray-600 uppercase mb-1">Data</label><input type="date" id="qcData" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none font-bold"></div>
+                            <div><label class="block text-xs font-bold text-gray-600 uppercase mb-1">Horário Início</label><input type="time" id="qcHoraInicio" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none font-bold"></div>
+                            <div><label class="block text-xs font-bold text-gray-600 uppercase mb-1">Horário Término</label><input type="time" id="qcHoraFim" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none font-bold"></div>
+                            <div><label class="block text-xs font-bold text-gray-600 uppercase mb-1">Avaliador (QC)</label><input type="text" id="qcAvaliador" class="w-full bg-gray-200 border border-gray-300 text-gray-600 rounded-lg px-3 py-2 text-sm font-bold" readonly></div>
+                            
+                            <div class="md:col-span-2">
+                                <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Origem / Fornecedor</label>
+                                <input type="text" id="qcProdutorDesc" placeholder="Ex: SANTA ELIZA - PRODUCAO..." class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none font-semibold mb-2">
+                                <select id="qcProdutor" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none text-gray-500"><option value="" disabled selected>Selecionar do cadastro (Opcional)</option></select>
+                            </div>
+                            
+                            <div><label class="block text-xs font-bold text-gray-600 uppercase mb-1">Nº Nota Fiscal / Coleta</label><input type="text" id="qcNf" placeholder="Ex: 93.341" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none font-bold"></div>
+                            <div><label class="block text-xs font-bold text-gray-600 uppercase mb-1">Lote / Container</label><input type="text" id="qcLote" placeholder="Ex: Lote 479" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none"></div>
+                            
+                            <div class="md:col-span-2"><label class="block text-xs font-bold text-gray-600 uppercase mb-1">Tipo Produto / Variedade</label><input type="text" id="qcFruta" placeholder="Ex: Tangerina Murcote" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none font-bold"></div>
+                            <div class="md:col-span-2"><label class="block text-xs font-bold text-gray-600 uppercase mb-1">Veículo / Motorista</label><input type="text" id="qcVeiculo" placeholder="Nome do motorista / placa" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none"></div>
+                            
+                            <div class="md:col-span-1"><label class="block text-xs font-bold text-gray-600 uppercase mb-1">Nº do Vale</label><input type="text" id="qcVale" placeholder="Ex: 1542" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none"></div>
+                            <div class="md:col-span-1"><label class="block text-xs font-bold text-gray-600 uppercase mb-1">Ação Realizada</label><input type="text" id="qcAcao" placeholder="Ex: Descarga" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none"></div>
+                            <div class="md:col-span-2"><label class="block text-xs font-bold text-gray-600 uppercase mb-1">Prestador Empilhadeira</label><input type="text" id="qcEmpilhadeira" placeholder="Nome da empresa ou operador" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none"></div>
+                        </div>
+                    </div>
+
+                    <!-- Bloco 2: Avaliação Técnica -->
+                    <div class="bg-blue-50/50 p-5 rounded-2xl border border-blue-100">
+                        <h3 class="text-sm font-black text-blue-800 uppercase mb-4 flex items-center gap-2"><i class="ph-bold ph-thermometer text-blue-600"></i> 2. Avaliação Técnica e Quantidades</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-4">
+                            <div class="md:col-span-2">
+                                <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Unidade / Capacidade</label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="qcUnidade" value="kg" placeholder="Unid." class="w-16 bg-white border border-gray-300 rounded-lg px-2 py-2 text-sm text-center">
+                                    <input type="number" step="0.1" id="qcCapacidade" placeholder="9.0" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none font-bold">
+                                </div>
+                            </div>
+                            
+                            <div><label class="block text-xs font-bold text-gray-600 uppercase mb-1">Vol. Total</label><input type="number" id="qcVolume" placeholder="3690" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none font-bold text-center"></div>
+                            <div><label class="block text-xs font-bold text-gray-600 uppercase mb-1">Qtd. Caixas</label><input type="number" id="qcQtdRecebida" placeholder="410" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none font-bold text-center"></div>
+                            
+                            <div><label class="block text-xs font-bold text-blue-700 uppercase mb-1">Cx Amostradas</label><input type="number" id="qcQtdAmostrada" placeholder="8" class="w-full bg-blue-100 border border-blue-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none font-black text-center text-blue-800"></div>
+                            <div><label class="block text-xs font-bold text-gray-600 uppercase mb-1">Média Peso Cx</label><input type="text" id="qcPesoMedio" placeholder="9.565" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none font-bold text-center"></div>
+                            
+                            <div><label class="block text-xs font-bold text-gray-600 uppercase mb-1">Brix (%)</label><input type="text" id="qcBrix" placeholder="Ex: 14.4" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none font-bold text-center"></div>
+                            <div><label class="block text-xs font-bold text-gray-600 uppercase mb-1">Temperatura</label><input type="text" id="qcTemp" placeholder="Ex: 15.0" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none font-bold text-center"></div>
+                            <div><label class="block text-xs font-bold text-gray-600 uppercase mb-1">Classificação</label><input type="text" id="qcClassificacao" placeholder="Ex: Cat 1" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none font-bold text-center"></div>
+                            
+                            <div class="md:col-span-3">
+                                <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Status Final da Avaliação</label>
+                                <select id="qcStatusFinal" class="w-full bg-gray-800 text-white border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none font-black tracking-wide">
+                                    <option value="Aprovado">APROVADO</option>
+                                    <option value="Aprovado com Restrição Leve">APROVADO COM RESTRIÇÃO LEVE</option>
+                                    <option value="Aprovado com Restrição Grave">APROVADO COM RESTRIÇÃO GRAVE</option>
+                                    <option value="Reprovado / Descarte">REPROVADO / DESCARTE</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bloco 3: Defeitos e Classificação -->
+                    <div class="bg-red-50/50 p-5 rounded-2xl border border-red-100">
+                        <h3 class="text-sm font-black text-red-800 uppercase mb-4 flex items-center gap-2"><i class="ph-bold ph-warning-circle text-red-600"></i> 3. Classificação e Defeitos</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
+                            <div class="bg-white p-3 rounded-lg border border-gray-200">
+                                <p class="text-xs font-bold text-gray-700 uppercase border-b pb-1 mb-2">Maturação</p>
+                                <div class="flex justify-between items-center mb-1"><span class="text-xs text-gray-600">Imaturo</span><input type="text" id="defImaturo" class="w-16 border rounded p-1 text-xs text-center" placeholder="0%"></div>
+                                <div class="flex justify-between items-center"><span class="text-xs text-gray-600">Passado</span><input type="text" id="defPassado" class="w-16 border rounded p-1 text-xs text-center" placeholder="0%"></div>
+                            </div>
+                            
+                            <div class="bg-white p-3 rounded-lg border border-gray-200">
+                                <p class="text-xs font-bold text-gray-700 uppercase border-b pb-1 mb-2">Defeitos Leves</p>
+                                <div class="flex justify-between items-center mb-1"><span class="text-xs text-gray-600">Dano superficial</span><input type="text" id="defDanoLeve" class="w-16 border rounded p-1 text-xs text-center" placeholder="0%"></div>
+                                <div class="flex justify-between items-center mb-1"><span class="text-xs text-gray-600">Mancha leve</span><input type="text" id="defManchaLeve" class="w-16 border rounded p-1 text-xs text-center" placeholder="0%"></div>
+                                <div class="flex justify-between items-center"><span class="text-xs text-gray-600">Sujidade</span><input type="text" id="defSujidade" class="w-16 border rounded p-1 text-xs text-center" placeholder="0%"></div>
+                            </div>
+                            
+                            <div class="bg-red-50 p-3 rounded-lg border border-red-200">
+                                <p class="text-xs font-bold text-red-800 uppercase border-b border-red-200 pb-1 mb-2">Graves / Podridão</p>
+                                <div class="flex justify-between items-center mb-1"><span class="text-xs text-gray-700 font-semibold">Podridão (Total)</span><input type="text" id="defPodridao" class="w-16 border border-red-300 rounded p-1 text-xs text-center font-bold text-red-700" placeholder="2.5%"></div>
+                                <div class="flex justify-between items-center mb-1"><span class="text-xs text-gray-600">Decomposição</span><input type="text" id="defDecomposicao" class="w-16 border rounded p-1 text-xs text-center" placeholder="0%"></div>
+                                <div class="flex justify-between items-center mb-1"><span class="text-xs text-gray-600">Bolor / Fermentação</span><input type="text" id="defBolor" class="w-16 border rounded p-1 text-xs text-center" placeholder="0%"></div>
+                                <div class="flex justify-between items-center"><span class="text-xs text-gray-600">Danos mecânicos graves</span><input type="text" id="defDanoGrave" class="w-16 border rounded p-1 text-xs text-center" placeholder="0%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bloco 4: Sensorial e Paletização -->
+                    <div class="bg-orange-50/50 p-5 rounded-2xl border border-orange-100 grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="md:col-span-4"><h3 class="text-sm font-black text-orange-800 uppercase mb-2 flex items-center gap-2"><i class="ph-bold ph-eye text-orange-600"></i> 4. Sensorial e Logística Interna</h3></div>
+                        
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Aspecto / Cor</label>
+                            <select id="qcAspecto" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-orange-500 outline-none font-semibold text-gray-700">
+                                <option value="Conforme">Conforme</option><option value="Não Conforme">Não Conforme</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Sabor / Odor</label>
+                            <select id="qcSabor" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-orange-500 outline-none font-semibold text-gray-700">
+                                <option value="Conforme">Conforme</option><option value="Não Conforme">Não Conforme</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Paletização/Marca (Sensorial)</label>
+                            <select id="qcPaletizacaoMarca" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-orange-500 outline-none font-semibold text-gray-700">
+                                <option value="Conforme">Conforme</option><option value="Não Conforme">Não Conforme</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Transporte: Temperatura</label>
+                            <select id="qcTransporteTemp" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-orange-500 outline-none font-semibold text-gray-700">
+                                <option value="Conforme">Conforme</option><option value="Não Conforme">Não Conforme</option><option value="Não Aplicável">Não Aplicável</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Condição das Caixas</label>
+                            <select id="qcCondCaixas" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-orange-500 outline-none font-semibold text-gray-700">
+                                <option value="Excelente">Excelente</option><option value="Boa">Boa</option><option value="Regular">Regular</option><option value="Ruim">Ruim (Avariadas)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Condição da Fruta</label>
+                            <select id="qcCondFruta" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-orange-500 outline-none font-semibold text-gray-700">
+                                <option value="Excelente">Excelente</option><option value="Boa">Boa</option><option value="Regular">Regular</option><option value="Ruim">Ruim</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Condição dos Paletes</label>
+                            <select id="qcCondPaletes" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-orange-500 outline-none font-semibold text-gray-700">
+                                <option value="Bom Estado">Bom Estado</option><option value="Avariado">Avariado / Quebrado</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Paletização (Montagem)</label>
+                            <select id="qcPaletizacao" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-orange-500 outline-none font-semibold text-gray-700">
+                                <option value="Alinhada">Alinhada / Firme</option><option value="Torta">Torta / Desalinhada</option><option value="Desmoronando">Desmoronando</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Bloco 5: Observações Gerais -->
+                    <div class="bg-white p-5 rounded-2xl border border-gray-200">
+                        <h3 class="text-sm font-black text-gray-700 uppercase mb-2 flex items-center gap-2"><i class="ph-bold ph-note-pencil text-gray-600"></i> Observações e Justificativas</h3>
+                        <textarea id="qcObs" rows="4" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-3 text-sm focus:border-blue-500 outline-none resize-none font-medium" placeholder="Ex: Foram analisadas 8cxs com 9kg que correspondem a 72kg; Peso médio das caixas conformes; Foram encontrados 2.50% de podridão..."></textarea>
+                    </div>
+
+                    <div class="flex flex-col md:flex-row items-center justify-end pt-4 border-t border-gray-100 gap-4">
+                        <button type="button" onclick="limparFormulario()" class="text-gray-500 hover:text-gray-700 font-semibold py-3 px-6 transition-colors">Cancelar / Limpar</button>
+                        <button type="button" id="btnSalvarQC" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-xl flex items-center gap-2 shadow-lg">
+                            <i class="ph-bold ph-check-circle"></i> <span id="btnSalvarTexto">Salvar Relatório</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+            
+            <a href="sistema.html" class="mt-2 mb-8 text-white/80 hover:text-white flex items-center gap-2 text-sm font-medium bg-black/30 hover:bg-black/50 px-6 py-3 rounded-full border border-white/10 backdrop-blur-md no-print transition-colors">
+                <i class="ph-bold ph-arrow-left"></i> Voltar ao Painel Principal
+            </a>
+        </main>
+    </div>
+
+    <!-- MODAL HISTÓRICO DE LAUDOS -->
+    <div id="modalHistorico" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="fecharModalHistorico()"></div>
+        <div class="bg-white w-full max-w-7xl rounded-3xl shadow-2xl relative z-10 flex flex-col max-h-[90vh] transform scale-95 transition-transform duration-300">
+            <div class="p-6 flex flex-col md:flex-row items-start md:items-center justify-between border-b border-gray-100 shrink-0 gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="bg-blue-50 p-2 rounded-lg text-blue-600"><i class="ph-fill ph-list-magnifying-glass text-2xl"></i></div>
+                    <div><h2 class="text-xl font-bold text-gray-800">Relatórios de Descarga</h2><p class="text-sm text-gray-500">Histórico de inspeções realizadas.</p></div>
+                </div>
+                
+                <div class="flex items-center gap-3 flex-wrap">
+                    <input type="date" id="filtroDataHist" class="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 font-semibold cursor-pointer outline-none focus:border-blue-500">
+                    <select id="filtroProdutorHist" class="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 font-semibold cursor-pointer outline-none focus:border-blue-500">
+                        <option value="TODOS">Todos os Produtores</option>
+                    </select>
+                    <button onclick="carregarHistorico()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 text-sm shadow-sm">
+                        <i class="ph-bold ph-funnel"></i> Filtrar
+                    </button>
+                    <button onclick="fecharModalHistorico()" class="text-gray-400 hover:text-red-500 p-2 rounded-xl ml-2"><i class="ph-bold ph-x text-xl"></i></button>
+                </div>
+            </div>
+            
+            <div class="overflow-auto flex-1 p-6 bg-gray-50">
+                <table class="w-full text-left whitespace-nowrap bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                    <thead class="bg-gray-100 text-gray-600 text-[10px] uppercase tracking-wider border-b border-gray-200">
+                        <tr>
+                            <th class="p-4 font-bold">Data / Avaliador</th>
+                            <th class="p-4 font-bold">Produtor / Fruta</th>
+                            <th class="p-4 font-bold text-center">Nº NF / Vale</th>
+                            <th class="p-4 font-bold text-center">Qtd. Rec.</th>
+                            <th class="p-4 font-bold text-center">Status</th>
+                            <th class="p-4 font-bold text-center">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="listaHistoricoBody" class="text-gray-700 text-sm"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ÁREA OCULTA PARA RENDERIZAR O PDF COM PRECISÃO -->
+    <div id="printZone" style="display: none; position: absolute; top: 0; left: 0; z-index: -9999; background: white;"></div>
+
+    <!-- Firebase Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        let db = null;
+        let laudosCache = [];
+        let idLaudoEmEdicao = null;
+        let fotosDaInspecao = [];
+
+        const nomeUsuarioLogado = localStorage.getItem('agrofortis_user_name') || 'Admin';
+        document.getElementById('qcAvaliador').value = nomeUsuarioLogado;
+
+        function preencherDataHora() {
+            const hoje = new Date();
+            const offset = hoje.getTimezoneOffset() * 60000;
+            const localISOTime = (new Date(hoje - offset)).toISOString().slice(0,-1);
+            const dataISO = localISOTime.split('T')[0];
+            const hora = localISOTime.split('T')[1].substring(0, 5);
+            
+            document.getElementById('qcData').value = dataISO;
+            document.getElementById('filtroDataHist').value = dataISO;
+            if(!document.getElementById('qcHoraInicio').value) document.getElementById('qcHoraInicio').value = hora;
+        }
+
+        function inicializarFirebase() {
+            const clustersSalvos = localStorage.getItem('agrofortis_firebase_clusters');
+            if (clustersSalvos && JSON.parse(clustersSalvos).length > 0) {
+                try { 
+                    firebase.initializeApp(JSON.parse(clustersSalvos)[0]); 
+                    db = firebase.firestore(); 
+                    carregarProdutoresNoSelect();
+                    preencherDataHora();
+                } catch (error) {}
+            }
+        }
+        window.onload = inicializarFirebase;
+
+        async function carregarProdutoresNoSelect() {
+            if (!db) return;
+            try {
+                const snapshot = await db.collection("produtores").orderBy("nome", "asc").get();
+                const sel = document.getElementById('qcProdutor');
+                const selHist = document.getElementById('filtroProdutorHist');
+                let html = '<option value="" disabled selected>Selecionar do cadastro (Opcional)</option>';
+                let htmlHist = '<option value="TODOS">Todos os Produtores</option>';
+                snapshot.forEach(doc => { 
+                    html += `<option value="${doc.data().nome}">${doc.data().nome}</option>`; 
+                    htmlHist += `<option value="${doc.data().nome}">${doc.data().nome}</option>`; 
+                });
+                sel.innerHTML = html;
+                selHist.innerHTML = htmlHist;
+                
+                sel.addEventListener('change', (e) => {
+                    if(e.target.value) document.getElementById('qcProdutorDesc').value = e.target.value;
+                });
+            } catch (e) {}
+        }
+
+        // ==========================
+        // LÓGICA DE MULTI-FOTOS
+        // ==========================
+        function processarFotosMulti(event) {
+            const files = event.target.files;
+            if(!files || files.length === 0) return;
+
+            Array.from(files).forEach(file => {
+                if(file.size > 5 * 1024 * 1024) {
+                    alert(`A foto ${file.name} é maior que 5MB e foi ignorada.`);
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        const max_size = 800;
+                        let w = img.width;
+                        let h = img.height;
+                        if (w > h) { if (w > max_size) { h *= max_size / w; w = max_size; } } 
+                        else { if (h > max_size) { w *= max_size / h; h = max_size; } }
+                        
+                        const canvas = document.createElement('canvas');
+                        canvas.width = w;
+                        canvas.height = h;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, w, h);
+                        
+                        const dataURL = canvas.toDataURL('image/jpeg', 0.8);
+                        fotosDaInspecao.push(dataURL);
+                        renderizarGaleriaUpload();
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+            event.target.value = ''; 
+        }
+
+        function renderizarGaleriaUpload() {
+            const container = document.getElementById('containerGaleria');
+            if (fotosDaInspecao.length === 0) {
+                container.innerHTML = `<div id="avisoSemFotos" class="col-span-full text-center py-6 text-gray-400 text-sm italic border-2 border-dashed border-gray-300 rounded-xl">Nenhuma foto adicionada à inspeção.</div>`;
+                return;
+            }
+
+            container.innerHTML = '';
+            fotosDaInspecao.forEach((b64, index) => {
+                const div = document.createElement('div');
+                div.className = "relative h-24 rounded-lg overflow-hidden border border-gray-200 group";
+                div.innerHTML = `
+                    <img src="${b64}" class="w-full h-full object-cover">
+                    <button type="button" onclick="removerFoto(${index})" class="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <i class="ph-bold ph-x text-xs"></i>
+                    </button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function removerFoto(index) {
+            fotosDaInspecao.splice(index, 1);
+            renderizarGaleriaUpload();
+        }
+
+        function limparFormulario() {
+            document.getElementById('formQC').reset();
+            document.getElementById('qcIdEmEdicao').value = '';
+            document.getElementById('qcAvaliador').value = nomeUsuarioLogado;
+            
+            fotosDaInspecao = [];
+            renderizarGaleriaUpload();
+            
+            preencherDataHora();
+            document.getElementById('btnSalvarTexto').innerText = "Salvar Relatório";
+        }
+
+        // ==========================
+        // SALVAR NO FIREBASE
+        // ==========================
+        document.getElementById('btnSalvarQC').addEventListener('click', async () => {
+            if (!db) return alert("Firebase não conectado.");
+            
+            const idEdicao = document.getElementById('qcIdEmEdicao').value;
+            const produtor = document.getElementById('qcProdutorDesc').value.trim();
+            const dataStr = document.getElementById('qcData').value;
+            const fruta = document.getElementById('qcFruta').value.trim();
+            
+            if(!produtor || !dataStr || !fruta) {
+                return alert("Preencha no mínimo: Data, Fornecedor e Fruta.");
+            }
+
+            const btn = document.getElementById('btnSalvarQC');
+            const textoBotaoOriginal = document.getElementById('btnSalvarTexto').innerText;
+            document.getElementById('btnSalvarTexto').innerText = "Salvando...";
+            btn.disabled = true;
+
+            const laudo = {
+                dataStr: dataStr,
+                horaInicio: document.getElementById('qcHoraInicio').value,
+                horaFim: document.getElementById('qcHoraFim').value,
+                avaliador: document.getElementById('qcAvaliador').value,
+                produtor: produtor,
+                vale: document.getElementById('qcVale').value.trim(),
+                acao: document.getElementById('qcAcao').value.trim(),
+                fruta: fruta,
+                nf: document.getElementById('qcNf').value.trim(),
+                lote: document.getElementById('qcLote').value.trim(),
+                veiculo: document.getElementById('qcVeiculo').value.trim(),
+                empilhadeira: document.getElementById('qcEmpilhadeira').value.trim(),
+                unidade: document.getElementById('qcUnidade').value.trim(),
+                capacidade: parseFloat(document.getElementById('qcCapacidade').value) || 0,
+                volume: parseInt(document.getElementById('qcVolume').value) || 0,
+                qtdRecebida: parseInt(document.getElementById('qcQtdRecebida').value) || 0,
+                qtdAmostrada: parseInt(document.getElementById('qcQtdAmostrada').value) || 0,
+                pesoMedio: document.getElementById('qcPesoMedio').value.trim(),
+                temperatura: document.getElementById('qcTemp').value.trim(),
+                brix: document.getElementById('qcBrix').value.trim(),
+                classificacao: document.getElementById('qcClassificacao').value.trim(),
+                statusFinal: document.getElementById('qcStatusFinal').value,
+                
+                defImaturo: document.getElementById('defImaturo').value.trim(),
+                defPassado: document.getElementById('defPassado').value.trim(),
+                defDanoLeve: document.getElementById('defDanoLeve').value.trim(),
+                defManchaLeve: document.getElementById('defManchaLeve').value.trim(),
+                defSujidade: document.getElementById('defSujidade').value.trim(),
+                defPodridao: document.getElementById('defPodridao').value.trim(),
+                defDecomposicao: document.getElementById('defDecomposicao').value.trim(),
+                defBolor: document.getElementById('defBolor').value.trim(),
+                defDanoGrave: document.getElementById('defDanoGrave').value.trim(),
+
+                qcAspecto: document.getElementById('qcAspecto').value,
+                qcSabor: document.getElementById('qcSabor').value,
+                qcPaletizacaoMarca: document.getElementById('qcPaletizacaoMarca').value,
+                qcTransporteTemp: document.getElementById('qcTransporteTemp').value,
+                condCaixas: document.getElementById('qcCondCaixas').value,
+                condFruta: document.getElementById('qcCondFruta').value,
+                condPaletes: document.getElementById('qcCondPaletes').value,
+                paletizacao: document.getElementById('qcPaletizacao').value,
+                
+                obs: document.getElementById('qcObs').value.trim(),
+                fotosArray: fotosDaInspecao 
+            };
+
+            try {
+                if (idEdicao) {
+                    await db.collection("relatorios_descarga").doc(idEdicao).update(laudo);
+                    alert("Relatório atualizado com sucesso!");
+                } else {
+                    laudo.dataCriacao = firebase.firestore.FieldValue.serverTimestamp();
+                    await db.collection("relatorios_descarga").add(laudo);
+                    alert("Relatório salvo com sucesso!");
+                }
+                limparFormulario();
+            } catch (e) {
+                console.error(e);
+                alert("Erro ao salvar relatório.");
+            } finally {
+                document.getElementById('btnSalvarTexto').innerText = textoBotaoOriginal;
+                btn.disabled = false;
+            }
+        });
+
+        // ==========================
+        // HISTÓRICO E LISTAGEM
+        // ==========================
+        const modalHistorico = document.getElementById('modalHistorico');
+        
+        function abrirModalHistorico() {
+            modalHistorico.classList.remove('hidden');
+            setTimeout(() => modalHistorico.classList.remove('opacity-0'), 10);
+            carregarHistorico();
+        }
+
+        function fecharModalHistorico() {
+            modalHistorico.classList.add('opacity-0');
+            setTimeout(() => modalHistorico.classList.add('hidden'), 300);
+        }
+
+        async function carregarHistorico() {
+            const tbody = document.getElementById('listaHistoricoBody');
+            const dataFiltro = document.getElementById('filtroDataHist').value;
+            const produtorFiltro = document.getElementById('filtroProdutorHist').value;
+            
+            if (!db) return;
+            tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-gray-500"><i class="ph-bold ph-spinner animate-spin text-xl inline-block mb-2"></i><br>Buscando laudos...</td></tr>`;
+
+            try {
+                const snapshot = await db.collection("relatorios_descarga").orderBy("dataCriacao", "desc").limit(300).get();
+                tbody.innerHTML = ""; 
+                laudosCache = [];
+                let hasResults = false;
+
+                snapshot.forEach(doc => {
+                    const l = { id: doc.id, ...doc.data() };
+                    
+                    if (dataFiltro && l.dataStr !== dataFiltro) return;
+                    if (produtorFiltro !== "TODOS" && l.produtor !== produtorFiltro) return;
+                    
+                    hasResults = true;
+                    laudosCache.push(l);
+                    
+                    const dataF = l.dataStr ? l.dataStr.split('-').reverse().join('/') : '-';
+                    const sf = l.statusFinal || 'Aprovado';
+                    const corStatus = sf.includes('Reprovado') ? 'text-red-600 bg-red-50' : (sf.includes('Aprovado') ? 'text-green-600 bg-green-50' : 'text-orange-600 bg-orange-50');
+
+                    const tr = document.createElement('tr');
+                    tr.className = "border-b border-gray-100 hover:bg-blue-50/30 transition-colors";
+                    tr.innerHTML = `
+                        <td class="p-4"><span class="block font-bold text-gray-800">${dataF} ${l.horaInicio || ''}</span><span class="block text-[10px] text-gray-500 uppercase">QC: ${l.avaliador}</span></td>
+                        <td class="p-4"><span class="block font-bold text-gray-800"><i class="ph-fill ph-tractor text-agro-500 mr-1"></i> ${l.produtor}</span><span class="block text-xs text-gray-500">${l.fruta}</span></td>
+                        <td class="p-4 text-center font-bold text-gray-700">${l.nf || '-'} / ${l.vale || '-'}</td>
+                        <td class="p-4 text-center font-black text-gray-900">${l.qtdRecebida || 0} Cx</td>
+                        <td class="p-4 text-center"><span class="px-2 py-1 rounded text-[10px] font-black uppercase ${corStatus}">${sf}</span></td>
+                        <td class="p-4 text-center flex justify-center gap-2">
+                            <button onclick="gerarPDFEstiloDoceMel('${l.id}', this)" title="Gerar PDF Profissional" class="bg-red-600 hover:bg-red-500 text-white p-2 rounded-lg transition-colors shadow-sm"><i class="ph-bold ph-file-pdf text-lg"></i></button>
+                            <button onclick="editarLaudo('${l.id}')" title="Editar" class="bg-gray-200 hover:bg-gray-300 text-gray-700 p-2 rounded-lg transition-colors"><i class="ph-bold ph-pencil-simple text-lg"></i></button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                if(!hasResults) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-gray-500 italic">Nenhum laudo encontrado.</td></tr>`;
+                }
+
+            } catch (e) {
+                console.error(e);
+                tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-red-500">Erro ao carregar laudos.</td></tr>`;
+            }
+        }
+
+        function editarLaudo(id) {
+            const l = laudosCache.find(x => x.id === id);
+            if (!l) return;
+
+            document.getElementById('qcIdEmEdicao').value = id;
+            document.getElementById('qcData').value = l.dataStr || '';
+            document.getElementById('qcHoraInicio').value = l.horaInicio || '';
+            document.getElementById('qcHoraFim').value = l.horaFim || '';
+            document.getElementById('qcAvaliador').value = l.avaliador || '';
+            document.getElementById('qcProdutorDesc').value = l.produtor || '';
+            document.getElementById('qcVale').value = l.vale || '';
+            document.getElementById('qcAcao').value = l.acao || '';
+            document.getElementById('qcFruta').value = l.fruta || '';
+            document.getElementById('qcNf').value = l.nf || '';
+            document.getElementById('qcLote').value = l.lote || '';
+            document.getElementById('qcVeiculo').value = l.veiculo || '';
+            document.getElementById('qcEmpilhadeira').value = l.empilhadeira || '';
+            document.getElementById('qcUnidade').value = l.unidade || 'kg';
+            document.getElementById('qcCapacidade').value = l.capacidade || '';
+            document.getElementById('qcVolume').value = l.volume || '';
+            document.getElementById('qcQtdRecebida').value = l.qtdRecebida || '';
+            document.getElementById('qcQtdAmostrada').value = l.qtdAmostrada || '';
+            document.getElementById('qcPesoMedio').value = l.pesoMedio || '';
+            document.getElementById('qcTemp').value = l.temperatura || '';
+            document.getElementById('qcBrix').value = l.brix || '';
+            document.getElementById('qcClassificacao').value = l.classificacao || '';
+            document.getElementById('qcStatusFinal').value = l.statusFinal || 'Aprovado';
+            
+            document.getElementById('defImaturo').value = l.defImaturo || '';
+            document.getElementById('defPassado').value = l.defPassado || '';
+            document.getElementById('defDanoLeve').value = l.defDanoLeve || '';
+            document.getElementById('defManchaLeve').value = l.defManchaLeve || '';
+            document.getElementById('defSujidade').value = l.defSujidade || '';
+            document.getElementById('defPodridao').value = l.defPodridao || '';
+            document.getElementById('defDecomposicao').value = l.defDecomposicao || '';
+            document.getElementById('defBolor').value = l.defBolor || '';
+            document.getElementById('defDanoGrave').value = l.defDanoGrave || '';
+
+            document.getElementById('qcAspecto').value = l.qcAspecto || 'Conforme';
+            document.getElementById('qcSabor').value = l.qcSabor || 'Conforme';
+            document.getElementById('qcPaletizacaoMarca').value = l.qcPaletizacaoMarca || 'Conforme';
+            document.getElementById('qcTransporteTemp').value = l.qcTransporteTemp || 'Conforme';
+            
+            document.getElementById('qcCondCaixas').value = l.condCaixas || 'Boa';
+            document.getElementById('qcCondFruta').value = l.condFruta || 'Excelente';
+            document.getElementById('qcCondPaletes').value = l.condPaletes || 'Bom Estado';
+            document.getElementById('qcPaletizacao').value = l.paletizacao || 'Alinhada';
+
+            document.getElementById('qcObs').value = l.obs || '';
+            
+            fotosDaInspecao = l.fotosArray || [];
+            if(l.foto && fotosDaInspecao.length === 0) fotosDaInspecao.push(l.foto); 
+            renderizarGaleriaUpload();
+
+            document.getElementById('btnSalvarTexto').innerText = "Atualizar Relatório";
+            fecharModalHistorico();
+            window.scrollTo(0, 0);
+        }
+
+        // ==========================
+        // GERAÇÃO DE PDF SEGURO E ABSOLUTO (SEM CORTES)
+        // ==========================
+        async function gerarPDFEstiloDoceMel(id, btnElement) {
+            const l = laudosCache.find(x => x.id === id);
+            if (!l) return;
+
+            const txtOriginal = btnElement.innerHTML;
+            btnElement.innerHTML = `<i class="ph-bold ph-spinner animate-spin text-lg"></i>`;
+            btnElement.disabled = true;
+
+            const dataBr = l.dataStr ? l.dataStr.split('-').reverse().join('/') : '-';
+            const sf = l.statusFinal || 'Aprovado';
+            const statusCor = sf.includes('Restrição') ? '#d97706' : (sf.includes('Reprovado') ? '#dc2626' : '#16a34a');
+
+            // --- CONSTRUÇÃO DA PÁGINA 1 (DADOS TEXTUAIS COMPACTOS) ---
+            let page1 = `
+            <div id="pdfPage1" style="width: 794px; height: 1122px; padding: 40px; box-sizing: border-box; background: white; font-family: Arial, sans-serif; display: flex; flex-direction: column;">
+                
+                <div style="border-bottom: 2px solid #ccc; padding-bottom: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: flex-end;">
+                    <div>
+                        <h1 style="font-size: 24px; font-weight: bold; margin: 0; text-transform: uppercase;">FLV_${l.fruta}</h1>
+                        <p style="font-size: 14px; font-weight: bold; margin: 5px 0 0 0; color: #555;">GRUPO Agrofortis</p>
+                    </div>
+                    <div style="text-align: right;">
+                        <p style="font-size: 12px; color: #777; margin: 0;">DATA: <b style="color: #333;">${dataBr}</b> | INÍCIO: <b style="color: #333;">${l.horaInicio || '--:--'}</b> | FIM: <b style="color: #333;">${l.horaFim || '--:--'}</b></p>
+                        <p style="font-size: 12px; color: #777; margin: 5px 0 0 0;">ID SISTEMA: <b style="color: #333;">${id.substring(0,8).toUpperCase()}</b></p>
+                    </div>
+                </div>
+
+                <table style="width: 100%; font-size: 11px; margin-bottom: 15px; border-collapse: collapse;">
+                    <tr>
+                        <td style="padding: 4px; border: 1px solid #ddd; background: #f9f9f9; width: 15%; color:#555;"><b>Produtor:</b></td>
+                        <td style="padding: 4px; border: 1px solid #ddd;" colspan="3"><b>${l.produtor}</b></td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 4px; border: 1px solid #ddd; background: #f9f9f9; color:#555;"><b>Produto:</b></td>
+                        <td style="padding: 4px; border: 1px solid #ddd;"><b>${l.fruta}</b></td>
+                        <td style="padding: 4px; border: 1px solid #ddd; background: #f9f9f9; width: 15%; color:#555;"><b>Volume / Unid:</b></td>
+                        <td style="padding: 4px; border: 1px solid #ddd;"><b>${l.volume || '-'} / ${l.unidade || 'kg'}</b></td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 4px; border: 1px solid #ddd; background: #f9f9f9; color:#555;"><b>Qtd. Caixas:</b></td>
+                        <td style="padding: 4px; border: 1px solid #ddd;"><b>${l.qtdRecebida || 0} (Cx)</b></td>
+                        <td style="padding: 4px; border: 1px solid #ddd; background: #f9f9f9; color:#555;"><b>Capacidade:</b></td>
+                        <td style="padding: 4px; border: 1px solid #ddd;"><b>${l.capacidade || '-'}</b></td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 4px; border: 1px solid #ddd; background: #f9f9f9; color:#555;"><b>NF / Vale:</b></td>
+                        <td style="padding: 4px; border: 1px solid #ddd;"><b>${l.nf || '-'} / ${l.vale || '-'}</b></td>
+                        <td style="padding: 4px; border: 1px solid #ddd; background: #f9f9f9; color:#555;"><b>Lote:</b></td>
+                        <td style="padding: 4px; border: 1px solid #ddd;"><b>${l.lote || '-'}</b></td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 4px; border: 1px solid #ddd; background: #f9f9f9; color:#555;"><b>Veículo / Mot:</b></td>
+                        <td style="padding: 4px; border: 1px solid #ddd;"><b>${l.veiculo || '-'}</b></td>
+                        <td style="padding: 4px; border: 1px solid #ddd; background: #f9f9f9; color:#555;"><b>Empilhadeira:</b></td>
+                        <td style="padding: 4px; border: 1px solid #ddd;"><b>${l.empilhadeira || '-'}</b></td>
+                    </tr>
+                </table>
+
+                <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                    <div style="flex: 1;">
+                        <h3 style="font-size: 12px; background:#f0f0f0; padding:6px; margin: 0 0 10px 0; border-left: 4px solid #16a34a; text-transform: uppercase;">1. Sensorial e Técnica</h3>
+                        <table style="width: 100%; font-size: 11px; border-collapse: collapse;">
+                            <tr><td style="padding: 4px; border-bottom: 1px solid #eee; color:#555;">Ação</td><td style="padding: 4px; border-bottom: 1px solid #eee; font-weight: bold; text-align: right;">${l.acao || '-'}</td></tr>
+                            <tr><td style="padding: 4px; border-bottom: 1px solid #eee; color:#555;">Aspecto / Cor</td><td style="padding: 4px; border-bottom: 1px solid #eee; font-weight: bold; text-align: right;">${l.qcAspecto || '-'}</td></tr>
+                            <tr><td style="padding: 4px; border-bottom: 1px solid #eee; color:#555;">Sabor / Odor</td><td style="padding: 4px; border-bottom: 1px solid #eee; font-weight: bold; text-align: right;">${l.qcSabor || '-'}</td></tr>
+                            <tr><td style="padding: 4px; border-bottom: 1px solid #eee; color:#555;">Temperatura</td><td style="padding: 4px; border-bottom: 1px solid #eee; font-weight: bold; text-align: right;">${l.temperatura || '-'} °C</td></tr>
+                            <tr><td style="padding: 4px; border-bottom: 1px solid #eee; color:#555;">Brix</td><td style="padding: 4px; border-bottom: 1px solid #eee; font-weight: bold; text-align: right;">${l.brix || '-'} %</td></tr>
+                            <tr><td style="padding: 4px; border-bottom: 1px solid #eee; color:#555;">Classificação</td><td style="padding: 4px; border-bottom: 1px solid #eee; font-weight: bold; text-align: right; color: #1d4ed8;">${l.classificacao || '-'}</td></tr>
+                        </table>
+                    </div>
+                    <div style="flex: 1;">
+                        <h3 style="font-size: 12px; background:#f0f0f0; padding:6px; margin: 0 0 10px 0; border-left: 4px solid #ea580c; text-transform: uppercase;">2. Condições Físicas</h3>
+                        <table style="width: 100%; font-size: 11px; border-collapse: collapse;">
+                            <tr><td style="padding: 4px; border-bottom: 1px solid #eee; color:#555;">Condição das Frutas</td><td style="padding: 4px; border-bottom: 1px solid #eee; font-weight: bold; text-align: right;">${l.condFruta || '-'}</td></tr>
+                            <tr><td style="padding: 4px; border-bottom: 1px solid #eee; color:#555;">Condição das Caixas</td><td style="padding: 4px; border-bottom: 1px solid #eee; font-weight: bold; text-align: right;">${l.condCaixas || '-'}</td></tr>
+                            <tr><td style="padding: 4px; border-bottom: 1px solid #eee; color:#555;">Condição dos Paletes</td><td style="padding: 4px; border-bottom: 1px solid #eee; font-weight: bold; text-align: right;">${l.condPaletes || '-'}</td></tr>
+                            <tr><td style="padding: 4px; border-bottom: 1px solid #eee; color:#555;">Paletização (Montagem)</td><td style="padding: 4px; border-bottom: 1px solid #eee; font-weight: bold; text-align: right;">${l.paletizacao || '-'}</td></tr>
+                            <tr><td style="padding: 4px; border-bottom: 1px solid #eee; color:#555;">Transporte (Temp)</td><td style="padding: 4px; border-bottom: 1px solid #eee; font-weight: bold; text-align: right;">${l.qcTransporteTemp || '-'}</td></tr>
+                        </table>
+                    </div>
+                </div>
+
+                <h3 style="font-size: 12px; background:#f0f0f0; padding:6px; margin: 0 0 10px 0; border-left: 4px solid #dc2626; text-transform: uppercase;">3. Tabela de Defeitos e Maturação</h3>
+                <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                    <div style="flex: 1;">
+                        <table style="width: 100%; font-size: 11px; border-collapse: collapse;">
+                            <tr><td colspan="2" style="background:#fff3f3; color:#b91c1c; font-weight:bold; padding:4px;">GRAVES / PODRIDÃO</td></tr>
+                            <tr><td style="padding: 4px; border-bottom: 1px solid #eee; color:#555;">Podridão Total</td><td style="padding: 4px; border-bottom: 1px solid #eee; font-weight: bold; text-align: right; color:#b91c1c;">${l.defPodridao || '0%'}</td></tr>
+                            <tr><td style="padding: 4px; border-bottom: 1px solid #eee; color:#555;">Decomposição</td><td style="padding: 4px; border-bottom: 1px solid #eee; font-weight: bold; text-align: right;">${l.defDecomposicao || '0%'}</td></tr>
+                            <tr><td style="padding: 4px; border-bottom: 1px solid #eee; color:#555;">Bolor/Fermentação</td><td style="padding: 4px; border-bottom: 1px solid #eee; font-weight: bold; text-align: right;">${l.defBolor || '0%'}</td></tr>
+                            <tr><td style="padding: 4px; border-bottom: 1px solid #eee; color:#555;">Dano Mecânico Grave</td><td style="padding: 4px; border-bottom: 1px solid #eee; font-weight: bold; text-align: right;">${l.defDanoGrave || '0%'}</td></tr>
+                        </table>
+                    </div>
+                    <div style="flex: 1;">
+                        <table style="width: 100%; font-size: 11px; border-collapse: collapse;">
+                            <tr><td colspan="2" style="background:#f8fafc; color:#333; font-weight:bold; padding:4px;">LEVES E MATURAÇÃO</td></tr>
+                            <tr><td style="padding: 4px; border-bottom: 1px solid #eee; color:#555;">Dano Superficial</td><td style="padding: 4px; border-bottom: 1px solid #eee; font-weight: bold; text-align: right;">${l.defDanoLeve || '0%'}</td></tr>
+                            <tr><td style="padding: 4px; border-bottom: 1px solid #eee; color:#555;">Mancha Leve</td><td style="padding: 4px; border-bottom: 1px solid #eee; font-weight: bold; text-align: right;">${l.defManchaLeve || '0%'}</td></tr>
+                            <tr><td style="padding: 4px; border-bottom: 1px solid #eee; color:#555;">Sujidade</td><td style="padding: 4px; border-bottom: 1px solid #eee; font-weight: bold; text-align: right;">${l.defSujidade || '0%'}</td></tr>
+                            <tr><td style="padding: 4px; border-bottom: 1px solid #eee; color:#555;">Imaturo / Verde</td><td style="padding: 4px; border-bottom: 1px solid #eee; font-weight: bold; text-align: right;">${l.defImaturo || '0%'}</td></tr>
+                            <tr><td style="padding: 4px; border-bottom: 1px solid #eee; color:#555;">Passado / Maduro</td><td style="padding: 4px; border-bottom: 1px solid #eee; font-weight: bold; text-align: right;">${l.defPassado || '0%'}</td></tr>
+                        </table>
+                    </div>
+                </div>
+
+                <div style="flex: 1;"> <!-- Ocupa o restante do espaço para empurrar assinatura pro fundo -->
+                    <h3 style="font-size: 12px; background:#f0f0f0; padding:6px; margin: 0 0 10px 0; border-left: 4px solid ${statusCor}; text-transform: uppercase;">4. Status Final e Observações</h3>
+                    <div style="border: 1px solid #ddd; padding: 10px; border-radius: 4px; background: #fafafa;">
+                        <p style="font-size: 14px; font-weight: 900; color: ${statusCor}; margin: 0 0 10px 0; text-transform: uppercase;">${sf}</p>
+                        <p style="font-size: 11px; color: #444; line-height: 1.5; margin: 0;">${(l.obs || 'Nenhuma observação registrada.').replace(/\n/g, '<br>')}</p>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 20px; text-align: center; border-top: 1px solid #eee; padding-top: 20px;">
+                    <div style="width: 250px; border-bottom: 1px solid #000; margin: 0 auto 5px auto;"></div>
+                    <p style="font-size: 12px; font-weight: bold; margin: 0;">${l.avaliador}</p>
+                    <p style="font-size: 10px; color: #777; margin: 0; text-transform: uppercase;">Responsável Técnico / Controle de Qualidade</p>
+                </div>
+            </div>`;
+
+            // --- CONSTRUÇÃO DA PÁGINA 2 (FOTOS) ---
+            const fotosArray = l.fotosArray || [];
+            if(l.foto && fotosArray.length === 0) fotosArray.push(l.foto); // Mantém o legado
+
+            let page2 = '';
+            if(fotosArray.length > 0) {
+                page2 = `
+                <div id="pdfPage2" style="width: 794px; height: 1122px; padding: 40px; box-sizing: border-box; background: white; font-family: Arial, sans-serif; display: flex; flex-direction: column;">
+                    <div style="border-bottom: 2px solid #ccc; padding-bottom: 10px; margin-bottom: 20px;">
+                        <h1 style="font-size: 20px; font-weight: bold; margin: 0; text-transform: uppercase;">EVIDÊNCIAS FOTOGRÁFICAS</h1>
+                        <p style="font-size: 12px; color: #777; margin: 5px 0 0 0;">Laudo ID: ${id.substring(0,8).toUpperCase()} | DATA: ${dataBr}</p>
+                    </div>
+                    
+                    <div style="display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; align-content: flex-start; flex: 1;">
+                `;
+                
+                // Limite de 6 fotos perfeitas por folha (3 linhas de 2)
+                const fotosParaMostrar = fotosArray.slice(0, 6);
+                fotosParaMostrar.forEach(b64 => {
+                    page2 += `<img src="${b64}" style="width: 340px; height: 260px; object-fit: cover; border: 1px solid #ddd; border-radius: 4px; padding: 4px; background: #fafafa;">`;
+                });
+
+                page2 += `</div>
+                    <div style="text-align: center; font-size: 10px; color: #999; margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px;">Documento gerado pelo sistema Agrofortis.</div>
+                </div>`;
+            }
+
+            // Atribui o conteúdo à zona oculta que nunca falha no scroll
+            const printZone = document.getElementById('printZone');
+            printZone.innerHTML = page1 + page2;
+            printZone.style.display = 'block';
+
+            // Geramos as imagens dos blocos e criamos o PDF matematicamente!
+            setTimeout(async () => {
+                try {
+                    const { jsPDF } = window.jspdf;
+                    const pdf = new jsPDF('p', 'mm', 'a4'); // A4 tem 210 x 297 mm
+                    
+                    // Tirar foto da Pagina 1
+                    const page1El = document.getElementById('pdfPage1');
+                    const canvas1 = await html2canvas(page1El, { scale: 2, useCORS: true, scrollY: 0, windowY: 0 });
+                    const imgData1 = canvas1.toDataURL('image/jpeg', 0.98);
+                    pdf.addImage(imgData1, 'JPEG', 0, 0, 210, 297);
+
+                    // Tirar foto da Pagina 2 se existir
+                    const page2El = document.getElementById('pdfPage2');
+                    if(page2El) {
+                        pdf.addPage();
+                        const canvas2 = await html2canvas(page2El, { scale: 2, useCORS: true, scrollY: 0, windowY: 0 });
+                        const imgData2 = canvas2.toDataURL('image/jpeg', 0.98);
+                        pdf.addImage(imgData2, 'JPEG', 0, 0, 210, 297);
+                    }
+                    
+                    pdf.save(`Laudo_QC_${l.produtor.replace(/\s+/g, '_')}_${dataBr.replace(/\//g, '')}.pdf`);
+                } catch(err) {
+                    console.error("Erro PDF", err);
+                    alert("Ocorreu um erro ao exportar o PDF.");
+                } finally {
+                    printZone.style.display = 'none';
+                    printZone.innerHTML = '';
+                    btnElement.innerHTML = txtOriginal;
+                    btnElement.disabled = false;
+                }
+            }, 500); // 500ms de delay garantem que o DOM oculto foi renderizado pelo browser
+        }
+    </script>
+</body>
+</html>

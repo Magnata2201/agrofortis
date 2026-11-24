@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agrofortis - Nova Carga</title>
+    
+    <!-- BLINDAGEM NUCLEAR PARA PÁGINAS PROTEGIDAS -->
+    <script>
+        function blindagemTotal() {
+            const auth = localStorage.getItem('agrofortis_auth');
+            const perms = JSON.parse(localStorage.getItem('agrofortis_user_perms') || '{}');
+            if (auth !== 'true') {
+                document.documentElement.style.display = 'none';
+                window.location.replace('index.html');
+            } else if (perms.cargas !== true) {
+                document.documentElement.style.display = 'none';
+                window.location.replace('sistema.html');
+            }
+        }
+        blindagemTotal();
+        setInterval(blindagemTotal, 500);
+
+        window.history.pushState(null, null, window.location.href);
+        window.addEventListener('popstate', function () { window.history.go(1); });
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Bibliotecas para Gerar Imagem e PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <script>
+        tailwind.config = { theme: { extend: { colors: { agro: { 500: '#16a34a', 600: '#15803d', 700: '#115e59' } } } } }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; width: 100%; margin: 0; padding: 0; }
+            body { background-color: white !important; margin: 0; }
+            @page { margin: 15mm; } 
+            .avoid-break { page-break-inside: avoid; break-inside: avoid; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen relative font-sans">
+
+    <div class="no-print w-full min-h-screen flex flex-col items-center justify-center p-4">
+        
+        <div class="fixed inset-0 z-0 bg-[url('https://images.unsplash.com/photo-1625246333195-78d9c38ad449?q=80&w=1920&auto=format&fit=crop')] bg-cover bg-center">
+            <div class="absolute inset-0 bg-green-950/90 backdrop-blur-sm"></div>
+        </div>
+
+        <main class="z-10 w-full max-w-5xl flex flex-col items-center my-8">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="bg-white/10 p-3 rounded-xl border border-white/20 shadow-lg backdrop-blur-md">
+                    <i class="ph-fill ph-plant text-4xl text-agro-500"></i>
+                </div>
+                <h1 class="text-3xl font-bold tracking-wide text-white">Agro<span class="text-agro-500">fortis</span></h1>
+            </div>
+
+            <div class="bg-white w-full rounded-3xl shadow-2xl p-6 md:p-8 border border-gray-100 relative mb-8">
+                
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-gray-100 pb-5 mb-6 gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                            <i class="ph-fill ph-truck text-agro-500"></i> <span id="tituloFormulario">Montar Nova Carga</span>
+                        </h2>
+                        <p class="text-gray-500 text-sm mt-1">Insira os itens, adicione vários produtores e gerencie as cargas.</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="abrirModalOrganizarCaminhao()" class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold py-2.5 px-5 rounded-xl flex items-center gap-2 shadow-md">
+                            <i class="ph-bold ph-squares-four text-blue-200"></i> Organizar Caminhão
+                        </button>
+                        <button type="button" onclick="abrirModalListaCargas()" class="bg-gray-800 hover:bg-agro-600 text-white text-sm font-semibold py-2.5 px-5 rounded-xl flex items-center gap-2 shadow-md">
+                            <i class="ph-bold ph-list-dashes text-agro-500"></i> Ver Cargas Salvas
+                        </button>
+                    </div>
+                </div>
+
+                <form id="formCarga" class="flex flex-col gap-6">
+                    <input type="hidden" id="cargaIdEmEdicao" value="">
+
+                    <div class="bg-gray-50 p-5 rounded-2xl border border-gray-200 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2"><i class="ph-bold ph-tractor text-agro-500 mr-1"></i> Produtor</label>
+                            <div class="flex gap-2">
+                                <div class="relative flex-1">
+                                    <i class="ph ph-user absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                                    <input type="text" id="produtorNomeExibicao" readonly placeholder="Clique em Buscar..." class="w-full bg-white border border-gray-300 text-gray-700 rounded-lg pl-9 pr-3 py-2.5 text-sm font-semibold shadow-sm cursor-not-allowed">
+                                    <input type="hidden" id="produtorIdOculto">
+                                </div>
+                                <button type="button" onclick="abrirModalProdutores()" class="bg-gray-800 hover:bg-agro-600 text-white px-4 rounded-lg font-bold">Buscar</button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2"><i class="ph-bold ph-storefront text-agro-500 mr-1"></i> Cliente Destino</label>
+                            <div class="relative">
+                                <i class="ph ph-shopping-cart absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                                <select id="clienteSelect" class="w-full bg-white border border-gray-300 text-gray-700 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-agro-500 font-medium appearance-none">
+                                    <option value="" disabled selected>Carregando clientes...</option>
+                                </select>
+                                <i class="ph-bold ph-caret-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-green-50/50 p-5 rounded-2xl border border-green-100">
+                        <label class="block text-gray-700 text-sm font-bold mb-3"><i class="ph-bold ph-package text-agro-500 mr-1"></i> Adicionar Itens à Carga</label>
+                        
+                        <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 mb-4 items-end">
+                            <div class="sm:col-span-4 relative">
+                                <label class="block text-gray-500 text-xs font-semibold mb-1">Fruta do Produtor</label>
+                                <div class="relative">
+                                    <i class="ph ph-apple-logo absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                                    <select id="produtoSelect" class="w-full bg-white border border-gray-300 text-gray-700 rounded-lg pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:border-agro-500 font-medium appearance-none disabled:bg-gray-100 disabled:text-gray-400" disabled>
+                                        <option value="" disabled selected>Aguardando produtor...</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="block text-gray-500 text-xs font-semibold mb-1">Valor Unit. (R$)</label>
+                                <input type="number" step="0.01" id="itemPrecoUnitario" placeholder="45.00" class="w-full bg-white border border-gray-300 text-gray-700 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-agro-500">
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="block text-gray-500 text-xs font-semibold mb-1">Qtd. (Caixas)</label>
+                                <input type="number" id="itemQuantidade" min="1" placeholder="Ex: 50" class="w-full bg-white border border-gray-300 text-gray-700 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-agro-500">
+                            </div>
+                            <div class="sm:col-span-2 flex items-center justify-center pb-2.5">
+                                <label class="flex items-center gap-2 text-sm font-bold text-gray-600 cursor-pointer hover:text-agro-600">
+                                    <input type="checkbox" id="itemBonificacao" class="w-5 h-5 text-agro-600 rounded focus:ring-agro-500 border-gray-300 cursor-pointer">
+                                    Bonificação
+                                </label>
+                            </div>
+                            <div class="sm:col-span-2 flex items-end">
+                                <button type="button" onclick="adicionarItemNaCarga()" class="w-full bg-gray-800 hover:bg-agro-600 text-white py-2.5 px-3 rounded-lg font-bold flex items-center justify-center gap-2">
+                                    <i class="ph-bold ph-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl overflow-hidden shadow-sm overflow-x-auto">
+                            <table class="w-full text-left text-sm whitespace-nowrap border-collapse border border-gray-200">
+                                <thead class="bg-gray-50 text-gray-500 text-[10px] uppercase tracking-wider">
+                                    <tr>
+                                        <th class="px-3 py-2 font-bold border border-gray-200">Fruta / Produtor</th>
+                                        <th class="px-2 py-2 font-bold border border-gray-200 text-center">Caixas</th>
+                                        <th class="px-2 py-2 font-bold border border-gray-200 text-right">Val. Unit</th>
+                                        <th class="px-2 py-2 font-bold border border-gray-200 text-right">Subtotal Bruto</th>
+                                        <th class="px-2 py-2 font-bold border border-gray-200 text-center text-blue-600 bg-blue-50/50">Tx. Comis (%)</th>
+                                        <th class="px-2 py-2 font-bold border border-gray-200 text-right text-green-700 bg-green-50/50">Líquido Produtor</th>
+                                        <th class="px-2 py-2 font-bold border border-gray-200 text-center">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabelaCargaBody" class="text-gray-700">
+                                    <tr><td colspan="7" class="px-4 py-6 text-center text-gray-400 text-sm italic border border-gray-200">A carga está vazia. Adicione itens acima.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col md:flex-row items-center justify-between mt-2 pt-6 border-t border-gray-100 gap-4">
+                        <div class="flex items-center gap-2 bg-gray-50 p-3 rounded-xl border border-gray-200">
+                            <label class="text-gray-700 font-bold text-sm">Desc. Venda Final (%):</label>
+                            <input type="number" id="descontoCarga" min="0" max="100" value="0" step="0.1" oninput="renderizarTabelaCarga()" class="w-20 bg-white border border-gray-300 text-gray-700 rounded-lg px-2 py-1 text-sm focus:outline-none focus:border-agro-500 font-bold text-center">
+                        </div>
+                        
+                        <div class="flex gap-3 w-full md:w-auto justify-end">
+                            <button type="button" onclick="limparCargaCompleta()" class="text-gray-500 hover:text-gray-700 font-semibold py-3 px-6 transition-colors">Cancelar / Limpar</button>
+                            <button type="button" id="btnSalvarCarga" class="bg-agro-600 hover:bg-agro-500 text-white font-bold py-3 px-8 rounded-xl flex items-center gap-2">
+                                <i class="ph-bold ph-check-circle"></i> <span id="btnSalvarTexto">Salvar Carga</span>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            
+            <a href="sistema.html" class="mt-6 text-white/80 hover:text-white flex items-center gap-2 text-sm font-medium bg-black/30 hover:bg-black/50 px-6 py-3 rounded-full border border-white/10 backdrop-blur-md no-print">
+                <i class="ph-bold ph-arrow-left"></i> Voltar ao Painel Principal
+            </a>
+        </main>
+
+        <!-- NOVO MODAL: ORGANIZAR CAMINHÃO -->
+        <div id="modalOrganizarCaminhao" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+            <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="fecharModalOrganizarCaminhao()"></div>
+            <div class="bg-white w-full max-w-5xl rounded-3xl shadow-2xl relative z-10 flex flex-col max-h-[95vh] transform scale-95 transition-transform duration-300">
+                <div class="p-6 flex flex-col md:flex-row items-start md:items-center justify-between border-b border-gray-100 shrink-0 gap-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2"><i class="ph-fill ph-squares-four text-blue-500 text-2xl"></i> Organizar Carga (Caminhão)</h2>
+                        <p class="text-sm text-gray-500 mt-1">Configure o número de paletes e distribua os clientes no caminhão.</p>
+                    </div>
+                    <div class="flex items-center gap-2 ml-auto">
+                        <button onclick="abrirModalHistoricoCaminhoes()" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2.5 px-4 rounded-xl flex items-center gap-2 text-sm border border-gray-300 shadow-sm transition-colors">
+                            <i class="ph-bold ph-clock-counter-clockwise"></i> Histórico
+                        </button>
+                        <button onclick="fecharModalOrganizarCaminhao()" class="text-gray-400 hover:text-red-500 p-2 rounded-xl"><i class="ph-bold ph-x text-xl"></i></button>
+                    </div>
+                </div>
+                
+                <div class="p-4 bg-gray-50 border-b border-gray-100 shrink-0 flex items-center gap-4 flex-wrap">
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm font-bold text-gray-700">Número de Paletes:</label>
+                        <input type="number" id="inputNumPaletes" value="28" min="1" max="100" class="w-20 bg-white border border-gray-300 text-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 font-bold text-center">
+                    </div>
+                    <button onclick="gerarGradeCaminhao()" class="bg-gray-800 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg text-sm shadow-sm transition-colors">
+                        Gerar Espaços
+                    </button>
+                    <div class="ml-auto flex gap-2">
+                        <button onclick="salvarOrganogramaCaminhao()" class="bg-green-600 hover:bg-green-500 text-white font-semibold py-2 px-4 rounded-lg flex items-center gap-2 text-sm shadow-sm transition-colors">
+                            <i class="ph-bold ph-floppy-disk"></i> Salvar Layout
+                        </button>
+                        <button onclick="baixarOrganogramaPNG(event)" class="bg-purple-600 hover:bg-purple-500 text-white font-semibold py-2 px-4 rounded-lg flex items-center gap-2 text-sm shadow-sm transition-colors">
+                            <i class="ph-bold ph-image"></i> Baixar PNG
+                        </button>
+                        <button onclick="baixarOrganogramaPDF(event)" class="bg-red-600 hover:bg-red-500 text-white font-semibold py-2 px-4 rounded-lg flex items-center gap-2 text-sm shadow-sm transition-colors">
+                            <i class="ph-bold ph-file-pdf"></i> Baixar PDF
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-auto flex-1 p-6 bg-gray-100" id="containerOrganogramaScroll">
+                    <div id="printOrganogramaArea" class="bg-white p-6 rounded-xl border border-gray-200 min-w-max mx-auto shadow-sm">
+                        <div class="text-center mb-4 border-b-2 border-gray-800 pb-4">
+                            <h2 class="text-2xl font-black uppercase tracking-wider text-gray-900">Organização do Caminhão</h2>
+                            <p class="text-sm text-gray-500 mt-1 font-bold">Data/Hora: <span id="dataOrganogramaTexto"></span> | <span id="totalPaletesTexto">0</span> Paletes</p>
+                        </div>
+                        
+                        <div class="flex flex-col lg:flex-row gap-8 items-start justify-center">
+                            <!-- A grade do caminhão (vista de cima) -->
+                            <div class="flex-1 w-full flex flex-col items-center">
+                                <div class="w-full max-w-sm border-4 border-gray-400 rounded-t-3xl border-b-0 p-3 pt-6 bg-gray-50 relative">
+                                    <div class="absolute -top-4 left-1/2 -translate-x-1/2 bg-gray-300 text-gray-600 text-[10px] font-black uppercase px-4 py-0.5 rounded-full border-2 border-gray-400">CABINE (FRENTE)</div>
+                                    
+                                    <div id="gradePaletes" class="grid grid-cols-2 gap-2 mt-2">
+                                        <!-- Os paletes entram aqui dinamicamente -->
+                                    </div>
+                                    
+                                    <div class="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-gray-300 text-gray-600 text-[10px] font-black uppercase px-4 py-0.5 rounded-full border-2 border-gray-400">PORTAS (TRASEIRA)</div>
+                                </div>
+                                <div class="w-full max-w-sm h-3 border-4 border-t-0 border-gray-400 rounded-b-md mb-4"></div>
+                            </div>
+                            
+                            <!-- Tabela Resumo com as Cores -->
+                            <div class="w-full lg:w-80 bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+                                <h3 class="text-sm font-black text-gray-800 uppercase border-b border-gray-200 pb-2 mb-3"><i class="ph-bold ph-list-numbers text-agro-500 mr-1"></i> Resumo da Carga</h3>
+                                <table class="w-full text-left border-collapse border border-gray-300 text-[11px]">
+                                    <thead class="bg-gray-100 text-gray-600 uppercase tracking-wider">
+                                        <tr>
+                                            <th class="py-1.5 px-2 border border-gray-300 text-center w-8">Cor</th>
+                                            <th class="py-1.5 px-2 border border-gray-300">Cliente / Descrição</th>
+                                            <th class="py-1.5 px-2 border border-gray-300 text-center w-16">Qtd</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tabelaResumoPaletes">
+                                        <tr><td colspan="3" class="py-4 text-center text-gray-400 text-xs italic border border-gray-300">Gerando layout...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal para Escolher Cliente para um Palete -->
+        <div id="modalEscolherClientePalete" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+            <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="fecharModalEscolherCliente()"></div>
+            <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl relative z-10 flex flex-col transform scale-95 transition-transform duration-300">
+                <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-2xl">
+                    <h3 class="font-bold text-gray-800 flex items-center gap-2"><i class="ph-fill ph-package text-blue-500"></i> Palete <span id="numeroPaleteAcao" class="text-blue-600 font-black"></span></h3>
+                    <button onclick="fecharModalEscolherCliente()" class="text-gray-400 hover:text-red-500"><i class="ph-bold ph-x text-lg"></i></button>
+                </div>
+                <div class="p-5">
+                    <label class="block text-gray-600 text-xs font-bold uppercase mb-2">Cliente / Descrição:</label>
+                    <input type="text" id="inputNomeClientePalete" placeholder="Pode digitar manualmente..." class="w-full bg-white border border-gray-300 text-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 font-medium mb-4">
+                    
+                    <!-- Lista Cargas Hoje Fixa -->
+                    <div class="mb-5">
+                        <p class="text-[10px] text-gray-500 font-bold mb-2 uppercase flex items-center gap-1"><i class="ph-fill ph-clock text-blue-500"></i> Cargas Salvas Hoje (Clique para selecionar)</p>
+                        <div id="listaSugestoesHoje" class="flex flex-col gap-1.5 max-h-48 overflow-y-auto bg-gray-50 border border-gray-200 p-2 rounded-lg">
+                            <p class="text-xs text-gray-400 italic text-center py-4">Buscando cargas...</p>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2 justify-end pt-3 border-t border-gray-100">
+                        <button onclick="limparPaleteAcao()" class="bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-2 px-4 rounded-lg text-sm transition-colors border border-red-200 mr-auto">
+                            Deixar Vazio
+                        </button>
+                        <button onclick="salvarClienteNoPalete()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-5 rounded-lg text-sm transition-colors shadow-md">
+                            Confirmar Palete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Histórico de Caminhões Organizados -->
+        <div id="modalHistoricoCaminhoes" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+            <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="fecharModalHistoricoCaminhoes()"></div>
+            <div class="bg-white w-full max-w-3xl rounded-3xl shadow-2xl relative z-10 flex flex-col transform scale-95 transition-transform duration-300">
+                <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-3xl">
+                    <h3 class="font-bold text-gray-800 text-lg flex items-center gap-2"><i class="ph-fill ph-clock-counter-clockwise text-blue-500"></i> Histórico de Caminhões Salvos</h3>
+                    <button onclick="fecharModalHistoricoCaminhoes()" class="text-gray-400 hover:text-red-500"><i class="ph-bold ph-x text-xl"></i></button>
+                </div>
+                <div class="p-0 overflow-auto max-h-[70vh]">
+                    <table class="w-full text-left border-collapse whitespace-nowrap text-sm">
+                        <thead class="bg-white sticky top-0 shadow-sm text-gray-600 text-[10px] uppercase tracking-wider">
+                            <tr>
+                                <th class="py-4 px-6 border-b border-gray-200">Data e Hora</th>
+                                <th class="py-4 px-6 border-b border-gray-200 text-center">Total Paletes</th>
+                                <th class="py-4 px-6 border-b border-gray-200">Registrado Por</th>
+                                <th class="py-4 px-6 border-b border-gray-200 text-center">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="listaHistoricoCaminhoesBody" class="text-gray-700 bg-gray-50">
+                            <!-- JS Povoará -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL 1 - PRODUTORES (ESTAVA FALTANDO) -->
+        <div id="modalProdutores" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+            <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="fecharModalProdutores()"></div>
+            <div class="bg-white w-full max-w-4xl rounded-3xl shadow-2xl relative z-10 flex flex-col max-h-[85vh] transform scale-95 transition-transform duration-300">
+                <div class="p-6 flex items-center justify-between border-b border-gray-100 shrink-0">
+                    <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2"><i class="ph-fill ph-tractor text-agro-500 text-2xl"></i> Selecionar Produtor</h2>
+                    <button onclick="fecharModalProdutores()" class="text-gray-400 hover:text-red-500 p-2 rounded-xl"><i class="ph-bold ph-x text-xl"></i></button>
+                </div>
+                <div class="p-4 bg-gray-50 border-b border-gray-100 shrink-0">
+                    <input type="text" id="inputBuscaProdutor" onkeyup="filtrarProdutores()" placeholder="Buscar por nome..." class="w-full bg-white border border-gray-200 text-gray-700 rounded-lg px-4 py-3 text-sm outline-none focus:border-agro-500">
+                </div>
+                <div class="overflow-auto flex-1 p-0">
+                    <table class="w-full text-left whitespace-nowrap">
+                        <thead class="sticky top-0 bg-gray-50 shadow-sm z-10 text-gray-500 text-xs uppercase">
+                            <tr>
+                                <th class="p-4 border-b border-gray-200">Produtor</th>
+                                <th class="p-4 border-b border-gray-200">CPF/CNPJ</th>
+                                <th class="p-4 border-b border-gray-200 text-center">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="listaProdutoresBody" class="text-gray-700 text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL 2 - LISTA DE CARGAS SALVAS (ESTAVA FALTANDO) -->
+        <div id="modalCargas" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+            <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="fecharModalListaCargas()"></div>
+            <div class="bg-white w-full max-w-7xl rounded-3xl shadow-2xl relative z-10 flex flex-col max-h-[90vh] transform scale-95 transition-transform duration-300">
+                <div class="p-6 flex flex-col md:flex-row items-start md:items-center justify-between border-b border-gray-100 gap-4 shrink-0">
+                    <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                        <i class="ph-fill ph-list-dashes text-agro-500 text-2xl"></i> Cargas Registradas
+                    </h2>
+                    <div class="flex items-center gap-3">
+                        <input type="date" id="filtroDataCargas" onchange="carregarListaDeCargas()" class="bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 font-semibold cursor-pointer outline-none">
+                        <button onclick="abrirModalOrdemImpressao()" class="bg-gray-800 hover:bg-agro-600 text-white font-semibold py-2 px-4 rounded-lg flex items-center gap-2 text-sm shadow-sm">
+                            <i class="ph-bold ph-printer"></i> Imprimir Caminhão
+                        </button>
+                        <button onclick="fecharModalListaCargas()" class="text-gray-400 hover:text-red-500 p-2 rounded-xl"><i class="ph-bold ph-x text-xl"></i></button>
+                    </div>
+                </div>
+                
+                <div class="overflow-auto flex-1 p-0 bg-gray-50">
+                    <table class="w-full text-left whitespace-nowrap">
+                        <thead class="sticky top-0 bg-white shadow-sm z-10 text-gray-500 text-xs uppercase">
+                            <tr>
+                                <th class="p-4 border-b border-gray-200">Data</th>
+                                <th class="p-4 border-b border-gray-200">Cliente Destino</th>
+                                <th class="p-4 border-b border-gray-200 text-center">Caixas</th>
+                                <th class="p-4 border-b border-gray-200 text-right">Valor Venda Final</th>
+                                <th class="p-4 border-b border-gray-200">Nota Fiscal (NF)</th>
+                                <th class="p-4 border-b border-gray-200 text-center">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="listaCargasSalvasBody" class="text-gray-700 text-sm bg-white"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL 3 - ORDEM DE IMPRESSÃO DO ROMANEIO (ESTAVA FALTANDO) -->
+        <div id="modalOrdemImpressao" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+            <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="fecharModalOrdemImpressao()"></div>
+            <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl relative z-10 flex flex-col max-h-[85vh] transform scale-95 transition-transform duration-300">
+                <div class="p-6 border-b border-gray-100 shrink-0">
+                    <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2"><i class="ph-fill ph-list-numbers text-agro-500 text-2xl"></i> Ordem de Impressão</h2>
+                    <p class="text-sm text-gray-500 mt-1">Digite o número da ordem que deseja para cada cliente e clique em Confirmar.</p>
+                </div>
+                <div class="overflow-auto flex-1 p-6 bg-gray-50">
+                    <ul id="listaOrdemCargasBody" class="flex flex-col gap-3"></ul>
+                </div>
+                <div class="p-4 bg-white border-t border-gray-100 flex justify-end gap-3 rounded-b-3xl shrink-0">
+                    <button onclick="fecharModalOrdemImpressao()" class="text-gray-500 hover:text-gray-700 font-semibold py-2 px-5">Cancelar</button>
+                    <button onclick="executarImpressaoCaminhao()" class="bg-agro-600 hover:bg-agro-500 text-white font-bold py-2 px-6 rounded-xl flex items-center gap-2">
+                        <i class="ph-bold ph-printer"></i> Confirmar Impressão
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ÁREAS OCULTAS PARA IMPRESSÃO DO ROMANEIO TEXTUAL -->
+    <div id="printZone" class="hidden print-only bg-white text-black p-4"></div>
+    <div class="hidden">
+        <div id="templateIndividual">
+            <div class="flex items-center justify-between border-b-2 border-gray-800 pb-4 mb-6">
+                <h1 class="text-2xl font-black uppercase tracking-wider text-gray-900">Romaneio de carga</h1>
+                <div class="text-right">
+                    <p class="text-sm font-bold text-gray-500 uppercase">Agrofortis</p>
+                    <p class="text-sm font-medium" id="printData"></p>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4 mb-6 bg-gray-50 p-4 rounded-xl border border-gray-300">
+                <div>
+                    <p class="text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-1">Cliente Destino (Comprador)</p>
+                    <p class="text-base font-bold text-gray-900" id="printCliente"></p>
+                </div>
+                <div>
+                    <p class="text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-1">Fornecedores (Produtores)</p>
+                    <p class="text-sm font-bold text-gray-900 mt-1" id="printProdutor"></p>
+                </div>
+                <div class="col-span-2 border-t border-gray-300 pt-3 mt-1">
+                    <p class="text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-1">Nota Fiscal</p>
+                    <p class="text-sm font-semibold text-gray-800 mt-1" id="printNF"></p>
+                </div>
+            </div>
+            <table class="w-full text-left border-collapse mb-6 border border-gray-400">
+                <thead>
+                    <tr class="bg-gray-800 text-white text-[10px] uppercase tracking-wider">
+                        <th class="py-2 px-3 border border-gray-800">Produto e Fornecedor</th>
+                        <th class="py-2 px-3 text-center border border-gray-800 w-16">Cx</th>
+                        <th class="py-2 px-3 text-right border border-gray-800 w-24">V. Unit</th>
+                        <th class="py-2 px-3 text-right border border-gray-800 w-24">Subtotal Bruto</th>
+                        <th class="py-2 px-3 text-center border border-gray-800 w-24">Comissão (%)</th>
+                        <th class="py-2 px-3 text-right border border-gray-800 w-28">Líquido Produtor</th>
+                    </tr>
+                </thead>
+                <tbody id="printTabelaItens"></tbody>
+                <tfoot>
+                    <tr class="bg-gray-100 avoid-break border border-gray-400">
+                        <td class="py-3 px-3 font-bold text-right text-gray-700 uppercase text-[11px]">TOTAIS:</td>
+                        <td class="py-3 px-3 text-center font-black text-sm text-gray-900" id="printTotalCaixas"></td>
+                        <td></td>
+                        <td class="py-3 px-3 text-right font-black text-sm text-gray-900" id="printValorSubtotalBruto"></td>
+                        <td class="py-3 px-3 text-right text-[11px] font-bold text-gray-500">Comissões: <br> <span id="printValorComissaoDescontada" class="text-red-600 text-sm"></span></td>
+                        <td class="py-3 px-3 text-right font-black text-base text-green-700 bg-green-50" id="printValorLiquidoProdutores"></td>
+                    </tr>
+                </tfoot>
+            </table>
+            <div class="mt-16 pt-6 border-t border-gray-200 text-center avoid-break">
+                <p class="text-xs text-gray-500 mb-8">Assinatura de Responsabilidade</p>
+                <div class="w-64 border-b border-gray-400 mx-auto"></div>
+            </div>
+        </div>
+
+        <div id="templateCaminhao">
+            <div class="flex items-center justify-between border-b-2 border-gray-800 pb-4 mb-6">
+                <div>
+                    <h1 class="text-2xl font-black uppercase tracking-wider text-gray-900">Romaneio do Caminhão</h1>
+                    <p class="text-sm text-gray-500 mt-1">Cargas Consolidadas</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-sm font-bold text-gray-500 uppercase">Agrofortis</p>
+                    <p class="text-sm font-bold text-agro-600 bg-green-50 px-3 py-1 rounded mt-1" id="printCaminhaoData"></p>
+                </div>
+            </div>
+            <div id="printCaminhaoConteudo"></div>
+            <div class="mt-8 bg-gray-800 text-white p-4 rounded-lg flex justify-between items-center avoid-break">
+                <span class="font-bold uppercase text-sm tracking-wider">Total Geral do Dia</span>
+                <div class="text-right flex items-center gap-6">
+                    <div class="text-center">
+                        <span class="block text-[10px] text-gray-400 uppercase">Total Volumes</span>
+                        <span class="font-black text-lg" id="printCaminhaoTotalCaixas"></span>
+                    </div>
+                    <div class="text-right">
+                        <span class="block text-[10px] text-gray-400 uppercase">Valor Total Final (Venda)</span>
+                        <span class="font-black text-lg text-green-400" id="printCaminhaoTotalValor"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        let db = null; let itensCarga = []; let produtosDoProdutorCache = []; let comissaoGeralCache = 0; let cargasSalvasCache = []; let ordemImpressaoCache = [];
+        let estadoPaletes = {};
+        let paleteEditandoAgora = null;
+        let historicoCaminhoesCache = [];
+
+        // Sistema de cores inteligentes para a tabela de organização do caminhão
+        const paletaCores = [
+            { bg: 'bg-blue-100', border: 'border-blue-400', text: 'text-blue-900' },
+            { bg: 'bg-emerald-100', border: 'border-emerald-400', text: 'text-emerald-900' },
+            { bg: 'bg-amber-100', border: 'border-amber-400', text: 'text-amber-900' },
+            { bg: 'bg-purple-100', border: 'border-purple-400', text: 'text-purple-900' },
+            { bg: 'bg-rose-100', border: 'border-rose-400', text: 'text-rose-900' },
+            { bg: 'bg-cyan-100', border: 'border-cyan-400', text: 'text-cyan-900' },
+            { bg: 'bg-fuchsia-100', border: 'border-fuchsia-400', text: 'text-fuchsia-900' },
+            { bg: 'bg-lime-100', border: 'border-lime-400', text: 'text-lime-900' },
+            { bg: 'bg-orange-100', border: 'border-orange-400', text: 'text-orange-900' },
+            { bg: 'bg-sky-100', border: 'border-sky-400', text: 'text-sky-900' }
+        ];
+        let mapaCoresCliente = {};
+        
+        function obterCorCliente(nomeCliente) {
+            if (!nomeCliente) return null;
+            if (!mapaCoresCliente[nomeCliente]) {
+                const corIndice = Object.keys(mapaCoresCliente).length % paletaCores.length;
+                mapaCoresCliente[nomeCliente] = paletaCores[corIndice];
+            }
+            return mapaCoresCliente[nomeCliente];
+        }
+
+        function remapearCores(estado) {
+            mapaCoresCliente = {};
+            Object.values(estado).forEach(nome => {
+                if (nome) obterCorCliente(nome);
+            });
+        }
+
+        const formatarMoeda = (valor) => Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+        function inicializarFirebase() {
+            const clustersSalvos = localStorage.getItem('agrofortis_firebase_clusters');
+            if (clustersSalvos && JSON.parse(clustersSalvos).length > 0) {
+                try { firebase.initializeApp(JSON.parse(clustersSalvos)[0]); db = firebase.firestore(); carregarClientesDoBanco(); } catch (error) {}
+            }
+        }
+        window.onload = inicializarFirebase;
+
+        async function carregarClientesDoBanco() {
+            const select = document.getElementById('clienteSelect');
+            if (!db) return;
+            try {
+                const snapshot = await db.collection("clientes").orderBy("nome", "asc").get();
+                select.innerHTML = snapshot.empty ? '<option value="" disabled selected>Nenhum cliente cadastrado.</option>' : '<option value="" disabled selected>-- Selecione o Cliente --</option>';
+                snapshot.forEach(doc => { const opt = document.createElement('option'); opt.value = doc.id; opt.textContent = doc.data().nome; select.appendChild(opt); });
+            } catch (erro) {}
+        }
+
+        const modalProdutores = document.getElementById('modalProdutores');
+        function abrirModalProdutores() { modalProdutores.classList.remove('hidden'); setTimeout(() => modalProdutores.classList.remove('opacity-0'), 10); carregarProdutoresNoModal(); }
+        function fecharModalProdutores() { modalProdutores.classList.add('opacity-0'); setTimeout(() => modalProdutores.classList.add('hidden'), 300); }
+
+        async function carregarProdutoresNoModal() {
+            const tbody = document.getElementById('listaProdutoresBody');
+            if (!db) return;
+            tbody.innerHTML = `<tr><td colspan="3" class="p-6 text-center text-gray-500">Buscando...</td></tr>`;
+            try {
+                const snapshot = await db.collection("produtores").orderBy("nome").get();
+                tbody.innerHTML = ""; 
+                snapshot.forEach(doc => {
+                    const prod = doc.data(); const tr = document.createElement('tr'); tr.className = "hover:bg-green-50 linha-prod";
+                    tr.innerHTML = `<td class="p-4 font-bold text-gray-800">${prod.nome} <span class="text-xs text-blue-500 ml-1 font-bold">${prod.comissaoGeral ? `(${prod.comissaoGeral}%)` : ''}</span></td><td class="p-4 text-gray-600">${prod.cpfCnpj}</td><td class="p-4 text-center"><button type="button" onclick='selecionarProdutor("${doc.id}", "${prod.nome}", ${prod.comissaoGeral || 0})' class="bg-agro-100 text-agro-700 font-bold px-4 py-1.5 rounded-lg text-xs">Selecionar</button></td>`;
+                    tbody.appendChild(tr);
+                });
+            } catch (e) {}
+        }
+
+        function filtrarProdutores() {
+            const termo = document.getElementById('inputBuscaProdutor').value.toLowerCase();
+            document.querySelectorAll('.linha-prod').forEach(linha => { linha.style.display = linha.innerText.toLowerCase().includes(termo) ? '' : 'none'; });
+        }
+
+        async function selecionarProdutor(id, nome, comissaoGeral) {
+            document.getElementById('produtorIdOculto').value = id; document.getElementById('produtorNomeExibicao').value = nome; comissaoGeralCache = comissaoGeral; fecharModalProdutores();
+            const doc = await db.collection("produtores").doc(id).get(); produtosDoProdutorCache = doc.data().produtos || []; preencherSelectFrutas();
+        }
+
+        function preencherSelectFrutas() {
+            const select = document.getElementById('produtoSelect'); select.disabled = false;
+            if (produtosDoProdutorCache.length === 0) { select.innerHTML = '<option value="" disabled selected>Nenhuma fruta.</option>'; select.disabled = true; return; }
+            select.innerHTML = '<option value="" disabled selected>Selecione a fruta...</option>';
+            produtosDoProdutorCache.forEach((fruta, index) => { const opt = document.createElement('option'); opt.value = index; opt.textContent = `${fruta.nome} (${fruta.tipo}) | Emb: ${fruta.embalagem} | Peso: ${fruta.peso}`; select.appendChild(opt); });
+        }
+
+        function adicionarItemNaCarga() {
+            const produtorId = document.getElementById('produtorIdOculto').value; const produtorNome = document.getElementById('produtorNomeExibicao').value;
+            const select = document.getElementById('produtoSelect'); const precoInput = document.getElementById('itemPrecoUnitario'); const qtdInput = document.getElementById('itemQuantidade'); const checkboxBonificacao = document.getElementById('itemBonificacao');
+            if (!produtorId) return alert("Selecione um produtor primeiro."); if (select.value === "") return alert("Selecione uma fruta.");
+            if (!precoInput.value || precoInput.value <= 0) return alert("Informe o valor unitário."); if (!qtdInput.value || qtdInput.value <= 0) return alert("Informe a quantidade de caixas.");
+
+            const fruta = produtosDoProdutorCache[select.value]; const valorUnitario = parseFloat(precoInput.value); const quantidade = parseFloat(qtdInput.value); const isBonificacao = checkboxBonificacao.checked;
+            const subtotalBruto = isBonificacao ? 0 : (valorUnitario * quantidade); const taxaAplicada = fruta.taxa > 0 ? fruta.taxa : comissaoGeralCache; const valorComissao = isBonificacao ? 0 : (subtotalBruto * (taxaAplicada / 100)); const liquidoProdutor = subtotalBruto - valorComissao;
+
+            itensCarga.push({ produtorId, produtorNome, nome: fruta.nome, tipo: fruta.tipo, embalagem: fruta.embalagem, peso: fruta.peso, valorUnitario, quantidade, isBonificacao, subtotal: subtotalBruto, taxaComissao: taxaAplicada, valorComissao: valorComissao, liquidoProdutor: liquidoProdutor });
+            precoInput.value = ""; qtdInput.value = ""; checkboxBonificacao.checked = false; select.selectedIndex = 0; renderizarTabelaCarga();
+        }
+
+        function removerItemDaCarga(index) { itensCarga.splice(index, 1); renderizarTabelaCarga(); }
+
+        function renderizarTabelaCarga() {
+            const tbody = document.getElementById('tabelaCargaBody'); tbody.innerHTML = "";
+            const percDesconto = parseFloat(document.getElementById('descontoCarga').value) || 0;
+            if (itensCarga.length === 0) { tbody.innerHTML = `<tr><td colspan="7" class="px-4 py-6 text-center text-gray-400 text-sm italic border border-gray-200">A carga está vazia.</td></tr>`; return; }
+            
+            let totalQtd = 0; let subtotalGeralBruto = 0; let totalComissoes = 0; let totalLiquidoProdutores = 0;
+
+            itensCarga.forEach((item, index) => {
+                totalQtd += item.quantidade; subtotalGeralBruto += item.subtotal; totalComissoes += item.valorComissao || 0; totalLiquidoProdutores += item.liquidoProdutor || item.subtotal; 
+                const badge = item.isBonificacao ? `<span class="bg-blue-100 text-blue-700 text-[9px] font-bold px-1.5 py-0.5 rounded ml-2 uppercase">Bonificação</span>` : '';
+                const formatPreco = item.isBonificacao ? `<span class="line-through text-gray-400">${formatarMoeda(item.valorUnitario)}</span>` : formatarMoeda(item.valorUnitario);
+                const taxaStr = item.isBonificacao ? '-' : `${item.taxaComissao || 0}%`;
+                const liquidoStr = item.isBonificacao ? '-' : formatarMoeda(item.liquidoProdutor || item.subtotal);
+                const tr = document.createElement('tr'); tr.className = "hover:bg-gray-50 text-[11px] text-gray-800";
+                tr.innerHTML = `<td class="px-3 py-2 border border-gray-200"><span class="font-bold flex items-center">${item.nome} (${item.tipo}) ${badge}</span><span class="block text-[9px] font-bold text-agro-600 uppercase mt-0.5">Prod: ${item.produtorNome || "Fornecedor"}</span></td><td class="px-2 py-2 text-center font-bold border border-gray-200">${item.quantidade}</td><td class="px-2 py-2 text-right border border-gray-200">${formatPreco}</td><td class="px-2 py-2 text-right font-bold border border-gray-200">${formatarMoeda(item.subtotal)}</td><td class="px-2 py-2 text-center font-bold text-blue-600 border border-gray-200 bg-blue-50/30">${taxaStr} <br> <span class="text-[9px] font-normal text-gray-500">(${formatarMoeda(item.valorComissao || 0)})</span></td><td class="px-2 py-2 text-right font-black text-green-700 border border-gray-200 bg-green-50/50">${liquidoStr}</td><td class="px-2 py-2 text-center border border-gray-200"><button type="button" onclick="removerItemDaCarga(${index})" class="text-red-500 hover:text-red-700"><i class="ph-bold ph-trash text-base"></i></button></td>`;
+                tbody.appendChild(tr);
+            });
+
+            const trTotal = document.createElement('tr');
+            trTotal.innerHTML = `<td colspan="3" class="px-4 py-3 font-bold text-gray-600 text-right uppercase text-xs bg-gray-100 border border-gray-300">TOTAIS DA CARGA:</td><td class="px-3 py-3 text-right font-black text-gray-800 text-sm bg-gray-100 border border-gray-300"><span class="block text-[9px] text-gray-500 uppercase font-bold">Subtotal Bruto Venda</span>${formatarMoeda(subtotalGeralBruto)}</td><td class="px-3 py-3 text-center font-black text-blue-700 text-sm bg-blue-50 border border-gray-300"><span class="block text-[9px] text-blue-400 uppercase font-bold">Total Comissões</span>${formatarMoeda(totalComissoes)}</td><td class="px-3 py-3 text-right font-black text-green-700 text-base bg-green-100 border border-gray-300"><span class="block text-[9px] text-green-600 uppercase font-bold">Total Pagar (Produtores)</span>${formatarMoeda(totalLiquidoProdutores)}</td><td class="bg-gray-100 border border-gray-300"></td>`;
+            tbody.appendChild(trTotal);
+        }
+
+        function limparCargaCompleta() {
+            document.getElementById('formCarga').reset(); document.getElementById('produtorIdOculto').value = ''; document.getElementById('produtoSelect').innerHTML = '<option value="" disabled selected>Aguardando produtor...</option>'; document.getElementById('produtoSelect').disabled = true; document.getElementById('cargaIdEmEdicao').value = ''; document.getElementById('descontoCarga').value = '0';
+            itensCarga = []; produtosDoProdutorCache = []; comissaoGeralCache = 0; renderizarTabelaCarga();
+        }
+
+        document.getElementById('btnSalvarCarga').addEventListener('click', async () => {
+            if (!db) return alert("Erro: Firebase não conectado.");
+            const cargaIdEmEdicao = document.getElementById('cargaIdEmEdicao').value; const clienteSelect = document.getElementById('clienteSelect'); const clienteId = clienteSelect.value; const clienteNome = clienteSelect.options[clienteSelect.selectedIndex]?.text; const percDesconto = parseFloat(document.getElementById('descontoCarga').value) || 0;
+            if (!clienteId) return alert("Selecione um cliente destino."); if (itensCarga.length === 0) return alert("A carga está vazia.");
+
+            const produtoresUnicos = [...new Set(itensCarga.map(i => i.produtorNome || "Fornecedor"))].join(' e ');
+            document.getElementById('btnSalvarTexto').innerText = "Salvando...";
+
+            const nomeUsuarioLogado = localStorage.getItem('agrofortis_user_name') || 'Admin';
+
+            try {
+                const totalCaixas = itensCarga.reduce((acc, i) => acc + i.quantidade, 0); const subtotalGeralBruto = itensCarga.reduce((acc, i) => acc + i.subtotal, 0); const valorDesconto = subtotalGeralBruto * (percDesconto / 100); const valorTotalFinalVenda = subtotalGeralBruto - valorDesconto; const totalComissoesCarga = itensCarga.reduce((acc, i) => acc + (i.valorComissao || 0), 0); const totalPagarProdutor = itensCarga.reduce((acc, i) => acc + (i.liquidoProdutor || i.subtotal), 0);
+                const cargaData = { produtorNome: produtoresUnicos, clienteId, clienteNome, itens: itensCarga, totalCaixas, subtotal: subtotalGeralBruto, percDesconto, valorDesconto, valorTotal: valorTotalFinalVenda, totalComissao: totalComissoesCarga, totalLiquidoProdutor: totalPagarProdutor, registradoPor: nomeUsuarioLogado };
+
+                if (cargaIdEmEdicao) { await db.collection("cargas").doc(cargaIdEmEdicao).update(cargaData); alert("CARGA ATUALIZADA!"); } 
+                else { cargaData.notaFiscal = ""; cargaData.dataCriacao = firebase.firestore.FieldValue.serverTimestamp(); await db.collection("cargas").add(cargaData); alert("CARGA SALVA!"); }
+                limparCargaCompleta();
+            } catch (e) { alert("Erro: " + e.message); } finally { document.getElementById('btnSalvarTexto').innerText = "Salvar Carga"; }
+        });
+
+        const modalCargas = document.getElementById('modalCargas');
+        function abrirModalListaCargas() {
+            modalCargas.classList.remove('hidden'); setTimeout(() => modalCargas.classList.remove('opacity-0'), 10);
+            const campoData = document.getElementById('filtroDataCargas'); if(!campoData.value) { const hoje = new Date(); const offset = hoje.getTimezoneOffset() * 60000; campoData.value = (new Date(hoje - offset)).toISOString().split('T')[0]; }
+            carregarListaDeCargas();
+        }
+        function fecharModalListaCargas() { modalCargas.classList.add('opacity-0'); setTimeout(() => modalCargas.classList.add('hidden'), 300); }
+
+        async function carregarListaDeCargas() {
+            const tbody = document.getElementById('listaCargasSalvasBody'); const dataFiltroStr = document.getElementById('filtroDataCargas').value;
+            if (!db) return; tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-gray-500">Buscando cargas...</td></tr>`;
+            try {
+                const snapshot = await db.collection("cargas").orderBy("dataCriacao", "desc").limit(300).get(); tbody.innerHTML = ""; cargasSalvasCache = [];
+                snapshot.forEach(doc => {
+                    const carga = { id: doc.id, ...doc.data() };
+                    if (carga.dataCriacao) {
+                        const date = carga.dataCriacao.toDate ? carga.dataCriacao.toDate() : new Date(carga.dataCriacao); const offset = date.getTimezoneOffset() * 60000; const dataLocalISO = new Date(date - offset).toISOString().split('T')[0];
+                        if(!dataFiltroStr || dataLocalISO === dataFiltroStr) {
+                            cargasSalvasCache.push(carga); const tr = document.createElement('tr'); tr.className = "border-b border-gray-100 hover:bg-gray-50";
+                            tr.innerHTML = `<td class="p-4 text-gray-600 font-medium">${date.toLocaleDateString('pt-BR')}</td><td class="p-4"><span class="block font-bold text-gray-800"><i class="ph-fill ph-storefront mr-1 text-agro-500"></i> ${carga.clienteNome}</span><span class="block text-[10px] text-gray-500 mt-1 uppercase font-bold">Prod: ${carga.produtorNome}</span></td><td class="p-4 text-center font-bold text-gray-800">${carga.totalCaixas}</td><td class="p-4 text-right"><span class="block font-bold text-gray-800">Venda: ${formatarMoeda(carga.valorTotal)}</span><span class="block text-xs font-bold text-green-600 mt-0.5">Pagar Prod: ${formatarMoeda(carga.totalLiquidoProdutor || carga.valorTotal)}</span></td><td class="p-4"><div class="flex items-center gap-2"><input type="text" id="nf-${doc.id}" value="${carga.notaFiscal || ''}" placeholder="Nº NF" class="w-full bg-white border rounded-lg px-2 py-1.5 text-xs"><button onclick="salvarNotaFiscal('${doc.id}')" title="Salvar NF" class="bg-gray-800 text-white p-1.5 rounded"><i class="ph-bold ph-floppy-disk"></i></button></div></td><td class="p-4 text-center"><div class="flex justify-center gap-2"><button onclick="editarCarga('${doc.id}')" class="bg-blue-100 text-blue-700 p-2 rounded-lg"><i class="ph-bold ph-pencil-simple text-lg"></i></button><button onclick="imprimirCarga('${doc.id}')" class="bg-gray-800 text-white p-2 rounded-lg"><i class="ph-bold ph-printer text-lg"></i></button></div></td>`;
+                            tbody.appendChild(tr);
+                        }
+                    }
+                });
+                if(cargasSalvasCache.length === 0) tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-gray-500">Nenhuma carga salva.</td></tr>`;
+            } catch (e) {}
+        }
+
+        async function salvarNotaFiscal(cargaId) {
+            if(!db) return; const nfValue = document.getElementById(`nf-${cargaId}`).value.trim();
+            try { await db.collection("cargas").doc(cargaId).update({ notaFiscal: nfValue }); alert("Nota Fiscal atualizada!"); } catch (e) {}
+        }
+
+        async function editarCarga(id) {
+            const carga = cargasSalvasCache.find(c => c.id === id); if (!carga) return;
+            document.getElementById('cargaIdEmEdicao').value = id; document.getElementById('clienteSelect').value = carga.clienteId; document.getElementById('descontoCarga').value = carga.percDesconto || 0;
+            document.getElementById('produtorIdOculto').value = ''; document.getElementById('produtorNomeExibicao').value = 'Selecione p/ add novos...'; document.getElementById('produtoSelect').innerHTML = '<option value="" disabled selected>Aguardando produtor...</option>'; document.getElementById('produtoSelect').disabled = true; produtosDoProdutorCache = []; comissaoGeralCache = 0;
+            itensCarga = carga.itens.map(i => ({ ...i, produtorNome: i.produtorNome || carga.produtorNome, produtorId: i.produtorId || carga.produtorId, taxaComissao: i.taxaComissao || 0, valorComissao: i.valorComissao || 0, liquidoProdutor: i.liquidoProdutor || i.subtotal }));
+            fecharModalListaCargas(); renderizarTabelaCarga(); window.scrollTo(0, 0);
+        }
+
+        const modalOrdem = document.getElementById('modalOrdemImpressao');
+        function abrirModalOrdemImpressao() { if(cargasSalvasCache.length === 0) return alert("Não há cargas para imprimir."); ordemImpressaoCache = [...cargasSalvasCache]; renderizarOrdemImpressao(); modalOrdem.classList.remove('hidden'); setTimeout(() => modalOrdem.classList.remove('opacity-0'), 10); }
+        function fecharModalOrdemImpressao() { modalOrdem.classList.add('opacity-0'); setTimeout(() => modalOrdem.classList.add('hidden'), 300); }
+
+        function renderizarOrdemImpressao() {
+            const ul = document.getElementById('listaOrdemCargasBody'); ul.innerHTML = "";
+            ordemImpressaoCache.forEach((carga, index) => {
+                const li = document.createElement('li'); li.className = "bg-white border border-gray-200 rounded-lg p-3 flex justify-between items-center shadow-sm";
+                li.innerHTML = `<div><span class="block font-bold"><i class="ph-fill ph-storefront text-agro-500 mr-1"></i> Cliente: ${carga.clienteNome}</span><span class="block text-xs text-gray-500 mt-1"><i class="ph-fill ph-tractor mr-1"></i> ${carga.produtorNome}</span></div><div class="flex flex-col items-end gap-1"><label class="text-[10px] font-bold text-gray-400 uppercase">Ordem</label><input type="number" id="ordem-carga-${index}" value="${index + 1}" min="1" class="w-16 border rounded p-1.5 text-center font-bold text-gray-700"></div>`;
+                ul.appendChild(li);
+            });
+        }
+
+        function dispararImpressao(conteudoHTML) { const printZone = document.getElementById('printZone'); printZone.innerHTML = conteudoHTML; printZone.classList.remove('hidden'); window.print(); printZone.classList.add('hidden'); printZone.innerHTML = ''; }
+
+        function imprimirCarga(cargaId) {
+            const carga = cargasSalvasCache.find(c => c.id === cargaId); if (!carga) return;
+            const date = carga.dataCriacao.toDate ? carga.dataCriacao.toDate() : new Date(carga.dataCriacao);
+            document.getElementById('printData').innerText = date.toLocaleDateString('pt-BR'); document.getElementById('printProdutor').innerText = carga.produtorNome; document.getElementById('printCliente').innerText = carga.clienteNome; document.getElementById('printNF').innerText = carga.notaFiscal || "Não informada"; document.getElementById('printTotalCaixas').innerText = carga.totalCaixas + " Cx";
+            const tbody = document.getElementById('printTabelaItens'); tbody.innerHTML = "";
+            carga.itens.forEach((item, idx) => {
+                const rowClass = idx % 2 === 0 ? "bg-white" : "bg-gray-50"; const formatPreco = item.isBonificacao ? `<span class="line-through text-gray-400">${formatarMoeda(item.valorUnitario)}</span>` : formatarMoeda(item.valorUnitario); const desc = item.isBonificacao ? `${item.nome} (${item.tipo}) - BONIFICAÇÃO` : `${item.nome} (${item.tipo})`; const nomeProd = item.produtorNome || carga.produtorNome; const valSub = item.isBonificacao ? '-' : formatarMoeda(item.subtotal); const valTx = item.isBonificacao ? '-' : `${item.taxaComissao || 0}%`; const valLiq = item.isBonificacao ? '-' : formatarMoeda(item.liquidoProdutor || item.subtotal);
+                const tr = document.createElement('tr'); tr.className = `text-gray-900 text-[10px] avoid-break ${rowClass}`; tr.innerHTML = `<td class="py-1.5 px-2 border border-gray-400"><span class="font-bold block">${desc}</span><span class="block text-[8px] text-gray-500 font-bold uppercase mt-0.5">PROD: ${nomeProd}</span></td><td class="py-1.5 px-2 text-center font-bold border border-gray-400">${item.quantidade}</td><td class="py-1.5 px-2 text-right border border-gray-400">${formatPreco}</td><td class="py-1.5 px-2 text-right font-bold border border-gray-400">${valSub}</td><td class="py-1.5 px-2 text-center font-bold text-blue-700 border border-gray-400">${valTx}</td><td class="py-1.5 px-2 text-right font-black text-green-800 border border-gray-400">${valLiq}</td>`;
+                tbody.appendChild(tr);
+            });
+            document.getElementById('printValorSubtotalBruto').innerText = formatarMoeda(carga.subtotal); document.getElementById('printValorComissaoDescontada').innerText = "- " + formatarMoeda(carga.totalComissao || 0); document.getElementById('printValorLiquidoProdutores').innerText = formatarMoeda(carga.totalLiquidoProdutor || carga.subtotal);
+            dispararImpressao(document.getElementById('templateIndividual').innerHTML);
+        }
+
+        function executarImpressaoCaminhao() {
+            ordemImpressaoCache.forEach((carga, index) => { const inputElement = document.getElementById(`ordem-carga-${index}`); carga.numeroOrdem = inputElement && inputElement.value ? parseInt(inputElement.value) : 999; });
+            ordemImpressaoCache.sort((a, b) => a.numeroOrdem - b.numeroOrdem);
+            const dataFiltroStr = document.getElementById('filtroDataCargas').value; const dataFormatada = dataFiltroStr ? dataFiltroStr.split('-').reverse().join('/') : "Todas as Datas";
+            document.getElementById('printCaminhaoData').innerText = dataFormatada; const containerConteudo = document.getElementById('printCaminhaoConteudo'); containerConteudo.innerHTML = "";
+            let totalGeralCaixas = 0; let totalGeralValor = 0;
+            ordemImpressaoCache.forEach(carga => {
+                totalGeralCaixas += carga.totalCaixas; totalGeralValor += carga.valorTotal; 
+                let itensHTML = carga.itens.map((item, idx) => {
+                    const rowClass = idx % 2 === 0 ? "bg-white" : "bg-gray-50"; const formatPreco = item.isBonificacao ? `<span class="line-through text-gray-400">${formatarMoeda(item.valorUnitario)}</span>` : formatarMoeda(item.valorUnitario); const desc = item.isBonificacao ? `${item.nome} (${item.tipo}) - BONIFICAÇÃO` : `${item.nome} (${item.tipo})`; const nomeProd = item.produtorNome || carga.produtorNome;
+                    return `<tr class="text-gray-800 avoid-break ${rowClass}"><td class="py-1.5 px-2 border border-gray-300"><span class="font-bold text-[11px] block">${desc}</span><span class="block text-[8px] text-gray-500 uppercase mt-0.5">PROD: ${nomeProd}</span></td><td class="py-1.5 px-2 text-center text-[11px] border border-gray-300">${item.quantidade}</td><td class="py-1.5 px-2 text-right text-[11px] border border-gray-300">${formatPreco}</td><td class="py-1.5 px-2 text-right font-bold text-[11px] border border-gray-300">${formatarMoeda(item.subtotal)}</td></tr>`;
+                }).join('');
+                const linhaDescontoCaminhao = (carga.percDesconto && carga.percDesconto > 0) ? `<tr class="bg-gray-50 avoid-break"><td colspan="3" class="py-1 px-2 text-[10px] font-bold text-gray-500 text-right uppercase border border-gray-300">Desconto (${carga.percDesconto}%):</td><td class="py-1 px-2 text-right text-[10px] font-bold text-red-50 border border-gray-300">- ${formatarMoeda(carga.valorDesconto)}</td></tr>` : '';
+                const divCarga = document.createElement('div'); divCarga.className = "mb-6 avoid-break"; 
+                divCarga.innerHTML = `<div class="bg-gray-100 p-2 font-bold text-gray-800 rounded-t-lg text-xs flex justify-between items-center border border-gray-300 border-b-0"><span class="uppercase"><i class="ph-fill ph-tractor text-agro-600 mr-1"></i> Prod: ${carga.produtorNome}</span><span class="uppercase"><i class="ph-fill ph-storefront text-agro-600 mr-1"></i> Cli: ${carga.clienteNome}</span></div><table class="w-full text-left border-collapse border border-gray-300"><thead><tr class="bg-gray-50 text-gray-500 text-[10px] uppercase avoid-break"><th class="py-1.5 px-2 border border-gray-300">Produto</th><th class="py-1.5 px-2 text-center border border-gray-300 w-16">Cx</th><th class="py-1.5 px-2 text-right border border-gray-300 w-24">V. Unit</th><th class="py-1.5 px-2 text-right border border-gray-300 w-24">Subtotal</th></tr></thead><tbody>${itensHTML}</tbody><tfoot>${linhaDescontoCaminhao}<tr class="bg-green-50 avoid-break"><td colspan="2" class="py-2 px-2 text-xs font-bold text-gray-700 border border-gray-300">TOTAL DESTA CARGA: ${carga.totalCaixas} Cx</td><td colspan="2" class="py-2 px-2 text-right text-xs font-black text-green-800 border border-gray-300">${formatarMoeda(carga.valorTotal)}</td></tr></tfoot></table>`;
+                containerConteudo.appendChild(divCarga);
+            });
+            document.getElementById('printCaminhaoTotalCaixas').innerText = totalGeralCaixas; document.getElementById('printCaminhaoTotalValor').innerText = formatarMoeda(totalGeralValor);
+            fecharModalOrdemImpressao(); dispararImpressao(document.getElementById('templateCaminhao').innerHTML);
+        }
+
+        // ==========================================
+        // LÓGICA DO ORGANOGRAMA DO CAMINHÃO
+        // ==========================================
+
+        const modalOrganizarCaminhao = document.getElementById('modalOrganizarCaminhao');
+        const modalEscolherClientePalete = document.getElementById('modalEscolherClientePalete');
+        const inputNumPaletes = document.getElementById('inputNumPaletes');
+        const gradePaletes = document.getElementById('gradePaletes');
+        const dataOrganogramaTexto = document.getElementById('dataOrganogramaTexto');
+        const totalPaletesTexto = document.getElementById('totalPaletesTexto');
+        const inputNomeClientePalete = document.getElementById('inputNomeClientePalete');
+
+        function abrirModalOrganizarCaminhao() {
+            modalOrganizarCaminhao.classList.remove('hidden');
+            setTimeout(() => modalOrganizarCaminhao.classList.remove('opacity-0'), 10);
+            
+            const hoje = new Date();
+            dataOrganogramaTexto.innerText = hoje.toLocaleDateString('pt-BR');
+            
+            if (Object.keys(estadoPaletes).length === 0) {
+                gerarGradeCaminhao();
+            }
+        }
+
+        function fecharModalOrganizarCaminhao() {
+            modalOrganizarCaminhao.classList.add('opacity-0');
+            setTimeout(() => modalOrganizarCaminhao.classList.add('hidden'), 300);
+        }
+
+        function gerarGradeCaminhao(layoutSalvo = null) {
+            const numPaletes = layoutSalvo ? layoutSalvo.numPaletes : (parseInt(inputNumPaletes.value) || 28);
+            if (layoutSalvo) inputNumPaletes.value = numPaletes;
+            totalPaletesTexto.innerText = numPaletes;
+            gradePaletes.innerHTML = '';
+            
+            if (!layoutSalvo) {
+                estadoPaletes = {}; 
+                mapaCoresCliente = {};
+                for (let i = 1; i <= numPaletes; i++) estadoPaletes[i] = "";
+            } else {
+                estadoPaletes = layoutSalvo.estadoPaletes;
+                remapearCores(estadoPaletes);
+                if (layoutSalvo.dataCriacao) {
+                    const d = layoutSalvo.dataCriacao.toDate ? layoutSalvo.dataCriacao.toDate() : new Date(layoutSalvo.dataCriacao);
+                    dataOrganogramaTexto.innerText = d.toLocaleDateString('pt-BR') + ' às ' + d.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+                }
+            }
+            
+            for (let i = 1; i <= numPaletes; i++) {
+                const nomeCliente = estadoPaletes[i] || "";
+                const divPalete = document.createElement('div');
+                divPalete.id = `palete-${i}`;
+                
+                if (nomeCliente) {
+                    const cor = obterCorCliente(nomeCliente);
+                    divPalete.className = `h-16 border-2 border-solid ${cor.border} ${cor.bg} rounded-md flex flex-col items-center justify-center cursor-pointer hover:opacity-80 transition-opacity relative shadow-sm p-1 overflow-hidden`;
+                    divPalete.onclick = () => abrirModalEscolherCliente(i);
+                    divPalete.innerHTML = `
+                        <span class="absolute top-0.5 left-1 text-[9px] font-black opacity-50 ${cor.text}">#${i}</span>
+                        <span class="text-[10px] sm:text-xs font-black ${cor.text} text-center w-full leading-tight flex-1 flex items-center justify-center break-words" id="texto-palete-${i}">${nomeCliente}</span>
+                    `;
+                } else {
+                    divPalete.className = "h-16 bg-white border-2 border-dashed border-gray-300 rounded-md flex flex-col items-center justify-center cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-colors relative shadow-sm";
+                    divPalete.onclick = () => abrirModalEscolherCliente(i);
+                    divPalete.innerHTML = `
+                        <span class="absolute top-0.5 left-1 text-[9px] font-black text-gray-400">#${i}</span>
+                        <i class="ph-bold ph-plus text-gray-300 text-lg hover:text-blue-400" id="icone-palete-${i}"></i>
+                        <span class="hidden" id="texto-palete-${i}"></span>
+                    `;
+                }
+                gradePaletes.appendChild(divPalete);
+            }
+            
+            renderizarTabelaResumo();
+        }
+
+        function abrirModalEscolherCliente(numeroPalete) {
+            paleteEditandoAgora = numeroPalete;
+            document.getElementById('numeroPaleteAcao').innerText = numeroPalete;
+            inputNomeClientePalete.value = estadoPaletes[numeroPalete] || "";
+            
+            const modalPrincipal = document.getElementById('modalOrganizarCaminhao');
+            modalPrincipal.style.zIndex = "40";
+            
+            modalEscolherClientePalete.classList.remove('hidden');
+            setTimeout(() => {
+                modalEscolherClientePalete.classList.remove('opacity-0');
+                inputNomeClientePalete.focus();
+                carregarSugestoesCargasHoje(); 
+            }, 10);
+        }
+
+        function fecharModalEscolherCliente() {
+            modalEscolherClientePalete.classList.add('opacity-0');
+            setTimeout(() => {
+                modalEscolherClientePalete.classList.add('hidden');
+                const modalPrincipal = document.getElementById('modalOrganizarCaminhao');
+                modalPrincipal.style.zIndex = "50";
+            }, 300);
+            paleteEditandoAgora = null;
+        }
+
+        function limparPaleteAcao() {
+            inputNomeClientePalete.value = "";
+            salvarClienteNoPalete();
+        }
+
+        function salvarClienteNoPalete() {
+            if (paleteEditandoAgora === null) return;
+            
+            const nomeCliente = inputNomeClientePalete.value.trim();
+            estadoPaletes[paleteEditandoAgora] = nomeCliente;
+            
+            const divPalete = document.getElementById(`palete-${paleteEditandoAgora}`);
+            
+            if (nomeCliente) {
+                const cor = obterCorCliente(nomeCliente);
+                divPalete.className = `h-16 border-2 border-solid ${cor.border} ${cor.bg} rounded-md flex flex-col items-center justify-center cursor-pointer hover:opacity-80 transition-opacity relative shadow-sm p-1 overflow-hidden`;
+                divPalete.innerHTML = `
+                    <span class="absolute top-0.5 left-1 text-[9px] font-black opacity-50 ${cor.text}">#${paleteEditandoAgora}</span>
+                    <span class="text-[10px] sm:text-xs font-black ${cor.text} text-center w-full leading-tight flex-1 flex items-center justify-center break-words" id="texto-palete-${paleteEditandoAgora}">${nomeCliente}</span>
+                `;
+            } else {
+                divPalete.className = "h-16 bg-white border-2 border-dashed border-gray-300 rounded-md flex flex-col items-center justify-center cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-colors relative shadow-sm";
+                divPalete.innerHTML = `
+                    <span class="absolute top-0.5 left-1 text-[9px] font-black text-gray-400">#${paleteEditandoAgora}</span>
+                    <i class="ph-bold ph-plus text-gray-300 text-lg hover:text-blue-400" id="icone-palete-${paleteEditandoAgora}"></i>
+                    <span class="hidden" id="texto-palete-${paleteEditandoAgora}"></span>
+                `;
+            }
+            
+            renderizarTabelaResumo();
+            fecharModalEscolherCliente();
+        }
+
+        function renderizarTabelaResumo() {
+            const tbody = document.getElementById('tabelaResumoPaletes');
+            if(!tbody) return;
+            
+            const contagem = {};
+            let totalOcupados = 0;
+            
+            Object.values(estadoPaletes).forEach(nome => {
+                if(nome) {
+                    contagem[nome] = (contagem[nome] || 0) + 1;
+                    totalOcupados++;
+                }
+            });
+            
+            if(Object.keys(contagem).length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" class="py-4 text-center text-gray-400 text-xs italic border border-gray-300">Nenhum palete atribuído.</td></tr>`;
+                return;
+            }
+            
+            let html = '';
+            for (const [nome, qtd] of Object.entries(contagem)) {
+                const cor = obterCorCliente(nome);
+                html += `
+                    <tr class="hover:bg-gray-50">
+                        <td class="py-1.5 px-3 border border-gray-300 text-center">
+                            <div class="w-4 h-4 rounded-full ${cor.bg} ${cor.border} border inline-block"></div>
+                        </td>
+                        <td class="py-1.5 px-3 border border-gray-300 font-bold text-gray-800 text-xs">${nome}</td>
+                        <td class="py-1.5 px-3 border border-gray-300 text-center font-black">${qtd}</td>
+                    </tr>
+                `;
+            }
+            
+            html += `
+                <tr class="bg-gray-100">
+                    <td colspan="2" class="py-2 px-3 border border-gray-300 text-right font-black uppercase text-gray-600">Total Ocupado:</td>
+                    <td class="py-2 px-3 border border-gray-300 text-center font-black text-agro-600">${totalOcupados}</td>
+                </tr>
+            `;
+            
+            tbody.innerHTML = html;
+        }
+
+        async function carregarSugestoesCargasHoje() {
+            const container = document.getElementById('listaSugestoesHoje');
+            if (!db) {
+                container.innerHTML = '<p class="text-xs text-red-500 italic text-center py-4">Banco não conectado.</p>';
+                return;
+            }
+            
+            const hoje = new Date();
+            const offset = hoje.getTimezoneOffset() * 60000;
+            const dataHojeISO = (new Date(hoje - offset)).toISOString().split('T')[0];
+
+            try {
+                const snapshot = await db.collection("cargas").orderBy("dataCriacao", "desc").limit(100).get();
+                let htmlOpcoes = '';
+                let sugestoesVistas = new Set();
+
+                snapshot.forEach(doc => {
+                    const carga = doc.data();
+                    if (carga.dataCriacao) {
+                        const date = carga.dataCriacao.toDate ? carga.dataCriacao.toDate() : new Date(carga.dataCriacao);
+                        const localOffset = date.getTimezoneOffset() * 60000;
+                        const dataCargaISO = new Date(date - localOffset).toISOString().split('T')[0];
+                        
+                        if (dataCargaISO === dataHojeISO) {
+                            const sugestao = `${carga.clienteNome} (${carga.produtorNome})`;
+                            if (!sugestoesVistas.has(sugestao)) {
+                                sugestoesVistas.add(sugestao);
+                                htmlOpcoes += `<button type="button" onclick="selecionarSugestaoPalete('${sugestao}')" class="text-left bg-white border border-blue-200 hover:bg-blue-50 text-blue-700 text-xs font-bold py-2 px-3 rounded shadow-sm transition-colors w-full truncate">${sugestao}</button>`;
+                            }
+                        }
+                    }
+                });
+                
+                if (htmlOpcoes === '') {
+                    htmlOpcoes = '<p class="text-xs text-gray-400 italic text-center py-4">Nenhuma carga registrada hoje.</p>';
+                }
+                
+                container.innerHTML = htmlOpcoes;
+            } catch (e) {
+                console.error("Erro ao carregar sugestões:", e);
+                container.innerHTML = '<p class="text-xs text-red-500 italic text-center py-4">Erro ao carregar cargas.</p>';
+            }
+        }
+
+        function selecionarSugestaoPalete(valor) {
+            document.getElementById('inputNomeClientePalete').value = valor;
+        }
+
+        async function salvarOrganogramaCaminhao() {
+            if (!db) return alert("Firebase não conectado.");
+            
+            const numPaletes = parseInt(document.getElementById('inputNumPaletes').value) || 28;
+            
+            const preenchidos = Object.values(estadoPaletes).filter(val => val !== "").length;
+            if (preenchidos === 0) return alert("O caminhão está vazio. Adicione pelo menos um cliente.");
+
+            const nomeUsuarioLogado = localStorage.getItem('agrofortis_user_name') || 'Admin';
+            
+            const dados = {
+                numPaletes: numPaletes,
+                estadoPaletes: estadoPaletes,
+                dataCriacao: firebase.firestore.FieldValue.serverTimestamp(),
+                registradoPor: nomeUsuarioLogado
+            };
+
+            try {
+                await db.collection("historico_caminhoes").add(dados);
+                alert("Organização do Caminhão salva no histórico com sucesso!");
+            } catch (e) {
+                console.error(e);
+                alert("Erro ao salvar histórico do caminhão.");
+            }
+        }
+
+        async function abrirModalHistoricoCaminhoes() {
+            const modal = document.getElementById('modalHistoricoCaminhoes');
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.remove('opacity-0'), 10);
+            
+            const tbody = document.getElementById('listaHistoricoCaminhoesBody');
+            tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-gray-500"><i class="ph-bold ph-spinner animate-spin text-xl inline-block mb-2"></i><br>Buscando histórico...</td></tr>`;
+            
+            if (!db) return;
+            
+            try {
+                const snapshot = await db.collection("historico_caminhoes").orderBy("dataCriacao", "desc").limit(50).get();
+                tbody.innerHTML = '';
+                historicoCaminhoesCache = [];
+                
+                if(snapshot.empty) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-gray-500 italic">Nenhum caminhão salvo no histórico.</td></tr>`;
+                    return;
+                }
+                
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const id = doc.id;
+                    historicoCaminhoesCache.push({ id, ...data });
+                    
+                    const date = data.dataCriacao ? (data.dataCriacao.toDate ? data.dataCriacao.toDate() : new Date(data.dataCriacao)) : new Date();
+                    const dataStr = date.toLocaleDateString('pt-BR') + ' às ' + date.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+                    
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-gray-100 border-b border-gray-200 transition-colors";
+                    tr.innerHTML = `
+                        <td class="py-3 px-6 font-bold text-gray-800">${dataStr}</td>
+                        <td class="py-3 px-6 text-center font-bold text-gray-600"><span class="bg-gray-200 px-2 py-1 rounded text-xs">${data.numPaletes} pt</span></td>
+                        <td class="py-3 px-6 text-gray-500 text-xs font-bold uppercase tracking-wider">${data.registradoPor || 'Desconhecido'}</td>
+                        <td class="py-3 px-6 text-center">
+                            <button onclick="carregarLayoutDoHistorico('${id}')" class="bg-blue-100 hover:bg-blue-200 text-blue-700 font-bold py-1.5 px-3 rounded-lg text-xs transition-colors shadow-sm">Carregar</button>
+                            <button onclick="deletarHistoricoCaminhao('${id}')" class="bg-red-50 hover:bg-red-100 text-red-600 font-bold py-1.5 px-3 rounded-lg text-xs transition-colors ml-1 shadow-sm"><i class="ph-bold ph-trash"></i></button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch(e) {
+                console.error(e);
+                tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-red-500">Erro ao carregar o histórico.</td></tr>`;
+            }
+        }
+
+        function fecharModalHistoricoCaminhoes() {
+            const modal = document.getElementById('modalHistoricoCaminhoes');
+            modal.classList.add('opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        }
+
+        function carregarLayoutDoHistorico(id) {
+            const layout = historicoCaminhoesCache.find(x => x.id === id);
+            if(!layout) return;
+            gerarGradeCaminhao(layout);
+            fecharModalHistoricoCaminhoes();
+        }
+        
+        async function deletarHistoricoCaminhao(id) {
+            if(confirm("Excluir este histórico permanentemente?")) {
+                await db.collection("historico_caminhoes").doc(id).delete();
+                abrirModalHistoricoCaminhoes();
+            }
+        }
+
+        // SALVA A IMAGEM COMO PNG
+        async function baixarOrganogramaPNG(event) {
+            const elementoParaImprimir = document.getElementById('printOrganogramaArea');
+            const btn = event.currentTarget;
+            const textoOriginal = btn.innerHTML;
+            btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i> Gerando PNG...`;
+            btn.disabled = true;
+
+            try {
+                const canvas = await html2canvas(elementoParaImprimir, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+                const imgData = canvas.toDataURL('image/png');
+                
+                const a = document.createElement('a');
+                a.href = imgData;
+                a.download = 'Organograma_Caminhao.png';
+                a.click();
+            } catch (e) {
+                console.error("Erro ao gerar Imagem:", e);
+                alert("Erro ao gerar a imagem PNG.");
+            } finally {
+                btn.innerHTML = textoOriginal;
+                btn.disabled = false;
+            }
+        }
+
+        // SALVA O PDF DIMENSIONADO PERFEITAMENTE PARA 1 PÁGINA
+        async function baixarOrganogramaPDF(event) {
+            const elementoParaImprimir = document.getElementById('printOrganogramaArea');
+            const btn = event.currentTarget;
+            const textoOriginal = btn.innerHTML;
+            btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i> Gerando PDF...`;
+            btn.disabled = true;
+
+            try {
+                // Tira a "foto" da área completa do caminhão + tabela
+                const canvas = await html2canvas(elementoParaImprimir, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+                const imgData = canvas.toDataURL('image/png');
+                
+                // Inicia o PDF A4 Retrato
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = pdf.internal.pageSize.getHeight();
+                
+                // Define as margens
+                const margin = 10;
+                const maxW = pdfWidth - (margin * 2);
+                const maxH = pdfHeight - (margin * 2);
+                
+                // Calcula a proporção matemática para espremer ou esticar a imagem sem cortar nada (1 única página)
+                const imgProps = pdf.getImageProperties(imgData);
+                const ratio = Math.min(maxW / imgProps.width, maxH / imgProps.height);
+                
+                const finalW = imgProps.width * ratio;
+                const finalH = imgProps.height * ratio;
+                
+                // Centraliza no PDF
+                const x = (pdfWidth - finalW) / 2;
+                const y = margin;
+                
+                pdf.addImage(imgData, 'PNG', x, y, finalW, finalH);
+                pdf.save('Organograma_Caminhao.pdf');
+            } catch (e) {
+                console.error("Erro ao gerar PDF:", e);
+                alert("Erro ao gerar o PDF.");
+            } finally {
+                btn.innerHTML = textoOriginal;
+                btn.disabled = false;
+            }
+        }
+
+    </script>
+</body>
+</html>

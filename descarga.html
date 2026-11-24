@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agrofortis - Gestão de Descargas</title>
+    
+    <!-- BLINDAGEM NUCLEAR PARA PÁGINAS PROTEGIDAS -->
+    <script>
+        function blindagemTotal() {
+            const auth = localStorage.getItem('agrofortis_auth');
+            let perms = {};
+            try { perms = JSON.parse(localStorage.getItem('agrofortis_user_perms') || '{}'); } catch(e) {}
+            if (auth !== 'true') {
+                document.documentElement.style.display = 'none';
+                window.location.replace('index.html');
+            } else if (perms.descargas !== true) {
+                document.documentElement.style.display = 'none';
+                window.location.replace('sistema.html');
+            }
+        }
+        blindagemTotal();
+        setInterval(blindagemTotal, 500);
+
+        window.history.pushState(null, null, window.location.href);
+        window.addEventListener('popstate', function () { window.history.go(1); });
+    </script>
+
+    <!-- Tailwind CSS e Phosphor Icons -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script>
+        tailwind.config = { theme: { extend: { colors: { agro: { 500: '#16a34a', 600: '#15803d', 700: '#115e59' } } } } }
+    </script>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center py-8 relative font-sans px-4">
+
+    <!-- Fundo Global -->
+    <div class="fixed inset-0 z-0 bg-[url('https://images.unsplash.com/photo-1625246333195-78d9c38ad449?q=80&w=1920&auto=format&fit=crop')] bg-cover bg-center">
+        <div class="absolute inset-0 bg-green-950/90 backdrop-blur-sm"></div>
+    </div>
+
+    <main class="z-10 w-full max-w-6xl flex flex-col items-center">
+        <!-- Header da Página -->
+        <div class="flex items-center gap-3 mb-6">
+            <div class="bg-white/10 p-3 rounded-xl border border-white/20 shadow-lg backdrop-blur-md">
+                <i class="ph-fill ph-forklift text-4xl text-agro-500"></i>
+            </div>
+            <h1 class="text-3xl font-bold tracking-wide text-white">Agro<span class="text-agro-500">fortis</span></h1>
+        </div>
+
+        <!-- CONTAINER PRINCIPAL -->
+        <div class="bg-white w-full rounded-3xl shadow-2xl p-6 md:p-8 border border-gray-100 relative mb-8">
+            
+            <!-- SEÇÃO: FORMULÁRIO DE DESCARGA -->
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-gray-100 pb-5 mb-6 gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                        <i class="ph-fill ph-hand-coins text-agro-500"></i> <span id="tituloFormulario">Nova Descarga</span>
+                    </h2>
+                    <p class="text-gray-500 text-sm mt-1" id="subtituloFormulario">Registre os vales, ações e valores das descargas na Ceasa.</p>
+                </div>
+                <button onclick="abrirModalLista()" class="bg-gray-800 hover:bg-agro-600 text-white text-sm font-semibold py-2.5 px-4 rounded-xl flex items-center gap-2 shadow-md">
+                    <i class="ph-bold ph-list-dashes text-agro-500"></i> Histórico de Descargas
+                </button>
+            </div>
+
+            <form id="formDescarga" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <!-- Data -->
+                <div class="md:col-span-1">
+                    <label class="block text-gray-600 text-xs font-bold uppercase tracking-wide mb-1">Data</label>
+                    <input type="date" id="descData" class="w-full bg-gray-50 border border-gray-200 text-gray-700 rounded-lg px-3 py-2.5 focus:outline-none focus:border-agro-500 font-semibold cursor-pointer">
+                </div>
+                <!-- Produtor -->
+                <div class="md:col-span-2">
+                    <label class="block text-gray-600 text-xs font-bold uppercase tracking-wide mb-1">Produtor</label>
+                    <select id="descProdutor" class="w-full bg-gray-50 border border-gray-200 text-gray-700 rounded-lg px-3 py-2.5 focus:outline-none focus:border-agro-500 font-medium">
+                        <option value="" disabled selected>Carregando...</option>
+                    </select>
+                </div>
+                <!-- Número do Vale -->
+                <div class="md:col-span-1">
+                    <label class="block text-gray-600 text-xs font-bold uppercase tracking-wide mb-1">Nº do Vale</label>
+                    <input type="text" id="descVale" placeholder="Ex: 1542" class="w-full bg-gray-50 border border-gray-200 text-gray-700 rounded-lg px-3 py-2.5 focus:outline-none focus:border-agro-500 font-medium">
+                </div>
+                <!-- Qual Ceasa -->
+                <div class="md:col-span-1">
+                    <label class="block text-gray-600 text-xs font-bold uppercase tracking-wide mb-1">Qual Ceasa</label>
+                    <input type="text" id="descCeasa" placeholder="Ex: Ceasa MG" class="w-full bg-gray-50 border border-gray-200 text-gray-700 rounded-lg px-3 py-2.5 focus:outline-none focus:border-agro-500 font-medium">
+                </div>
+                <!-- Ação -->
+                <div class="md:col-span-1">
+                    <label class="block text-gray-600 text-xs font-bold uppercase tracking-wide mb-1">Ação</label>
+                    <input type="text" id="descAcao" placeholder="Ex: Descarregamento" class="w-full bg-gray-50 border border-gray-200 text-gray-700 rounded-lg px-3 py-2.5 focus:outline-none focus:border-agro-500 font-medium">
+                </div>
+                <!-- Prestador de Serviço -->
+                <div class="md:col-span-2">
+                    <label class="block text-gray-600 text-xs font-bold uppercase tracking-wide mb-1">Prestador de Serviço</label>
+                    <input type="text" id="descPrestador" placeholder="Nome do chapa / empresa" class="w-full bg-gray-50 border border-gray-200 text-gray-700 rounded-lg px-3 py-2.5 focus:outline-none focus:border-agro-500 font-medium">
+                </div>
+                <!-- Valor -->
+                <div class="md:col-span-1">
+                    <label class="block text-gray-600 text-xs font-bold uppercase tracking-wide mb-1 text-blue-600">Valor Ação (R$)</label>
+                    <input type="number" step="0.01" id="descValor" placeholder="0.00" class="w-full bg-blue-50 border border-blue-200 text-blue-800 rounded-lg px-3 py-2.5 focus:outline-none focus:border-blue-500 font-bold">
+                </div>
+                <!-- Remonte de Palete -->
+                <div class="md:col-span-1">
+                    <label class="block text-gray-600 text-xs font-bold uppercase tracking-wide mb-1 text-orange-600">Valor Remonte (R$)</label>
+                    <input type="number" step="0.01" id="descRemonte" placeholder="0.00" class="w-full bg-orange-50 border border-orange-200 text-orange-800 rounded-lg px-3 py-2.5 focus:outline-none focus:border-orange-500 font-bold">
+                </div>
+                
+                <!-- Botoes Formulario -->
+                <div class="md:col-span-2 flex items-end justify-end gap-3 mt-4 md:mt-0">
+                    <button type="button" onclick="cancelarEdicao()" class="text-gray-500 hover:text-gray-700 hover:bg-gray-100 font-semibold py-2.5 px-5 rounded-lg transition-colors w-full sm:w-auto">Limpar</button>
+                    <button type="button" id="btnSalvar" class="bg-agro-600 hover:bg-agro-500 text-white font-bold py-2.5 px-6 rounded-lg flex items-center justify-center gap-2 shadow-md w-full sm:w-auto">
+                        <i class="ph-bold ph-check"></i> <span id="btnSalvarTexto">Salvar Registro</span>
+                    </button>
+                </div>
+            </form>
+
+            <div class="border-t border-gray-200 my-8"></div>
+
+            <!-- SEÇÃO: FECHAMENTO / RELATÓRIO -->
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between pb-4 mb-4 gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                        <i class="ph-fill ph-chart-polar text-blue-600"></i> Fechamento de Descargas
+                    </h2>
+                    <p class="text-gray-500 text-xs mt-1">Consolide os gastos filtrando por Período, Produtor e Ceasa.</p>
+                </div>
+            </div>
+
+            <!-- Filtros do Fechamento -->
+            <div class="bg-gray-50 border border-gray-200 p-4 rounded-xl flex flex-wrap gap-4 items-end mb-6">
+                <div>
+                    <label class="block text-gray-500 text-[10px] font-bold uppercase tracking-wide mb-1">De (Data):</label>
+                    <input type="date" id="filtroDataInicio" class="bg-white border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-gray-700 font-bold outline-none focus:border-blue-500 cursor-pointer">
+                </div>
+                <div>
+                    <label class="block text-gray-500 text-[10px] font-bold uppercase tracking-wide mb-1">Até (Data):</label>
+                    <input type="date" id="filtroDataFim" class="bg-white border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-gray-700 font-bold outline-none focus:border-blue-500 cursor-pointer">
+                </div>
+                <div class="flex-1 min-w-[200px]">
+                    <label class="block text-gray-500 text-[10px] font-bold uppercase tracking-wide mb-1">Produtor (Opcional):</label>
+                    <select id="filtroProdutor" class="w-full bg-white border border-gray-300 text-gray-700 rounded-lg px-3 py-1.5 text-sm outline-none focus:border-blue-500">
+                        <option value="TODOS">-- Todos os Produtores --</option>
+                    </select>
+                </div>
+                <div class="flex-1 min-w-[150px]">
+                    <label class="block text-gray-500 text-[10px] font-bold uppercase tracking-wide mb-1">Ceasa (Opcional):</label>
+                    <input type="text" id="filtroCeasa" placeholder="Qualquer Ceasa..." class="w-full bg-white border border-gray-300 text-gray-700 rounded-lg px-3 py-1.5 text-sm outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <button onclick="gerarFechamento()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-1.5 px-5 rounded-lg flex items-center gap-2 shadow-md">
+                        <i class="ph-bold ph-funnel"></i> Gerar Fechamento
+                    </button>
+                </div>
+            </div>
+
+            <!-- Cards de Resumo -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 hidden" id="cardsResumo">
+                <div class="bg-gray-800 rounded-xl p-4 border border-gray-700 shadow-md">
+                    <span class="text-gray-400 text-[10px] font-bold uppercase tracking-wide flex items-center gap-1"><i class="ph-bold ph-receipt"></i> Qtd. de Vales (Ações)</span>
+                    <span class="text-2xl font-black text-white mt-1 block" id="resumoQtd">0</span>
+                </div>
+                <div class="bg-orange-50 rounded-xl p-4 border border-orange-200 shadow-sm">
+                    <span class="text-orange-700 text-[10px] font-bold uppercase tracking-wide flex items-center gap-1"><i class="ph-bold ph-stack"></i> Total Remontes (Paletes)</span>
+                    <span class="text-2xl font-black text-orange-900 mt-1 block" id="resumoTotalRemonte">R$ 0,00</span>
+                </div>
+                <div class="bg-blue-50 rounded-xl p-4 border border-blue-200 shadow-sm">
+                    <span class="text-blue-700 text-[10px] font-bold uppercase tracking-wide flex items-center gap-1"><i class="ph-bold ph-money"></i> Valor Total das Ações</span>
+                    <span class="text-2xl font-black text-blue-800 mt-1 block" id="resumoTotalValor">R$ 0,00</span>
+                </div>
+            </div>
+
+            <!-- Tabela de Fechamento -->
+            <div id="containerFechamento" class="overflow-x-auto bg-white rounded-xl border border-gray-200 hidden">
+                <table class="w-full text-left border-collapse whitespace-nowrap text-sm">
+                    <thead class="bg-gray-100 text-gray-600 text-xs uppercase tracking-wider">
+                        <tr>
+                            <th class="py-3 px-4 font-bold border-b">Data / Ceasa</th>
+                            <th class="py-3 px-4 font-bold border-b">Produtor</th>
+                            <th class="py-3 px-4 font-bold border-b">Vale / Prestador</th>
+                            <th class="py-3 px-4 font-bold border-b">Ação</th>
+                            <th class="py-3 px-4 font-bold text-right border-b text-orange-700">Remonte</th>
+                            <th class="py-3 px-4 font-bold text-right border-b text-blue-700">Valor Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaFechamentoBody" class="text-gray-700"></tbody>
+                    <tfoot id="tabelaFechamentoFoot" class="bg-gray-800 text-white font-bold"></tfoot>
+                </table>
+            </div>
+            <div id="msgFechamentoVazio" class="text-center text-gray-400 py-6 italic">Selecione os filtros acima e clique em Gerar Fechamento.</div>
+
+        </div>
+
+        <a href="sistema.html" class="mb-8 text-white/80 hover:text-white flex items-center gap-2 text-sm font-medium bg-black/30 hover:bg-black/50 px-6 py-3 rounded-full border border-white/10 backdrop-blur-md transition-colors">
+            <i class="ph-bold ph-arrow-left"></i> Voltar ao Painel Principal
+        </a>
+    </main>
+
+    <!-- Modal Histórico de Descargas -->
+    <div id="modalLista" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 opacity-0 transition-opacity duration-300">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="fecharModalLista()"></div>
+        <div class="bg-white w-full max-w-7xl rounded-3xl shadow-2xl relative z-10 flex flex-col max-h-[90vh] transform scale-95 transition-transform duration-300">
+            
+            <div class="p-6 flex items-center justify-between border-b border-gray-100 shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="bg-green-50 p-2 rounded-lg text-agro-600"><i class="ph-fill ph-list-dashes text-2xl"></i></div>
+                    <div><h2 class="text-xl font-bold text-gray-800">Histórico Completo</h2><p class="text-sm text-gray-500">Últimos 300 registros.</p></div>
+                </div>
+                <button onclick="fecharModalLista()" class="text-gray-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-xl"><i class="ph-bold ph-x text-xl"></i></button>
+            </div>
+
+            <div class="overflow-auto flex-1 p-0">
+                <table class="w-full text-left border-collapse whitespace-nowrap text-sm">
+                    <thead class="sticky top-0 bg-gray-50 shadow-sm z-10">
+                        <tr class="text-gray-500 text-xs uppercase tracking-wider">
+                            <th class="p-4 font-semibold border-b">Data / Ceasa</th>
+                            <th class="p-4 font-semibold border-b">Produtor</th>
+                            <th class="p-4 font-semibold border-b">Vale / Serviço</th>
+                            <th class="p-4 font-semibold border-b text-right">R$ Ação</th>
+                            <th class="p-4 font-semibold border-b text-right">R$ Remonte</th>
+                            <th class="p-4 font-semibold border-b text-center">Opções</th>
+                        </tr>
+                    </thead>
+                    <tbody id="listaGeralBody" class="text-gray-700"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        let db = null; 
+        let idDescargaEmEdicao = null; 
+        let descargasCacheGeral = [];
+
+        const formatarMoeda = (valor) => Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        
+        // Define a data de hoje nos inputs de data
+        const preencherDatasIniciais = () => {
+            const hoje = new Date(); 
+            const offset = hoje.getTimezoneOffset() * 60000;
+            const dataISO = (new Date(hoje - offset)).toISOString().split('T')[0];
+            document.getElementById('descData').value = dataISO;
+            document.getElementById('filtroDataInicio').value = dataISO;
+            document.getElementById('filtroDataFim').value = dataISO;
+        };
+
+        function inicializarFirebase() {
+            const clustersSalvos = localStorage.getItem('agrofortis_firebase_clusters');
+            if (clustersSalvos && JSON.parse(clustersSalvos).length > 0) {
+                try { 
+                    firebase.initializeApp(JSON.parse(clustersSalvos)[0]); 
+                    db = firebase.firestore(); 
+                    carregarProdutoresNoSelect();
+                    preencherDatasIniciais();
+                } catch (error) { console.error(error); }
+            }
+        }
+        window.onload = inicializarFirebase;
+
+        async function carregarProdutoresNoSelect() {
+            const selectForm = document.getElementById('descProdutor');
+            const selectFiltro = document.getElementById('filtroProdutor');
+            if (!db) return;
+            try {
+                const snapshot = await db.collection("produtores").orderBy("nome", "asc").get();
+                let html = '<option value="" disabled selected>Selecione o Produtor</option>';
+                let htmlFiltro = '<option value="TODOS">-- Todos os Produtores --</option>';
+                
+                snapshot.forEach(doc => { 
+                    const p = doc.data();
+                    html += `<option value="${p.nome}">${p.nome}</option>`; 
+                    htmlFiltro += `<option value="${p.nome}">${p.nome}</option>`; 
+                });
+                
+                selectForm.innerHTML = html;
+                selectFiltro.innerHTML = htmlFiltro;
+            } catch (erro) { console.log(erro); }
+        }
+
+        window.cancelarEdicao = function() {
+            document.getElementById('formDescarga').reset(); 
+            preencherDatasIniciais();
+            idDescargaEmEdicao = null;
+            document.getElementById('tituloFormulario').innerText = "Nova Descarga"; 
+            document.getElementById('btnSalvarTexto').innerText = "Salvar Registro";
+        }
+
+        // SALVAR DESCARGA (CREATE / UPDATE)
+        document.getElementById('btnSalvar').addEventListener('click', async () => {
+            if (!db) return alert("Erro: Firebase não conectado.");
+            
+            const dataStr = document.getElementById('descData').value;
+            const produtor = document.getElementById('descProdutor').value;
+            const vale = document.getElementById('descVale').value.trim();
+            const ceasa = document.getElementById('descCeasa').value.trim();
+            const acao = document.getElementById('descAcao').value.trim();
+            const prestador = document.getElementById('descPrestador').value.trim();
+            const valor = parseFloat(document.getElementById('descValor').value) || 0;
+            const remonte = parseFloat(document.getElementById('descRemonte').value) || 0;
+
+            if (!dataStr || !produtor) return alert("Data e Produtor são obrigatórios!");
+            if (valor === 0 && remonte === 0) return alert("Informe um Valor de Ação ou Remonte.");
+
+            const btnTexto = document.getElementById('btnSalvarTexto'); 
+            btnTexto.innerText = "Salvando...";
+
+            const nomeUsuarioLogado = localStorage.getItem('agrofortis_user_name') || 'Admin';
+
+            const dados = {
+                dataStr, 
+                produtor, 
+                vale, 
+                ceasa, 
+                acao, 
+                prestador, 
+                valor, 
+                remonte,
+                timestampData: new Date(dataStr + "T12:00:00Z"), // Para ordenação
+                registradoPor: nomeUsuarioLogado
+            };
+
+            try {
+                if (idDescargaEmEdicao) {
+                    await db.collection("descargas").doc(idDescargaEmEdicao).update(dados);
+                    alert("Descarga ATUALIZADA!");
+                } else {
+                    dados.dataCriacao = firebase.firestore.FieldValue.serverTimestamp();
+                    await db.collection("descargas").add(dados);
+                    alert("Descarga REGISTRADA!");
+                }
+                cancelarEdicao(); 
+            } catch (erro) { alert("Erro ao salvar."); } 
+            finally { btnTexto.innerText = idDescargaEmEdicao ? "Atualizar Registro" : "Salvar Registro"; }
+        });
+
+        // FECHAMENTO / RELATÓRIO
+        window.gerarFechamento = async function() {
+            if (!db) return;
+            const dtInicio = document.getElementById('filtroDataInicio').value;
+            const dtFim = document.getElementById('filtroDataFim').value;
+            const filtroProd = document.getElementById('filtroProdutor').value;
+            const filtroCeasa = document.getElementById('filtroCeasa').value.trim().toLowerCase();
+
+            if (!dtInicio || !dtFim) return alert("Defina o período.");
+
+            const container = document.getElementById('containerFechamento');
+            const msgVazio = document.getElementById('msgFechamentoVazio');
+            const tbody = document.getElementById('tabelaFechamentoBody');
+            const tfoot = document.getElementById('tabelaFechamentoFoot');
+            const cards = document.getElementById('cardsResumo');
+
+            msgVazio.innerHTML = `<i class="ph-bold ph-spinner animate-spin text-2xl mb-2 inline-block"></i><br>Buscando dados...`;
+            msgVazio.classList.remove('hidden'); container.classList.add('hidden'); cards.classList.add('hidden');
+
+            try {
+                // Busca otimizada pelas datas
+                const snapshot = await db.collection("descargas")
+                    .where("dataStr", ">=", dtInicio)
+                    .where("dataStr", "<=", dtFim)
+                    .orderBy("dataStr", "asc")
+                    .get();
+
+                let totalQtd = 0;
+                let totalValor = 0;
+                let totalRemonte = 0;
+                let htmlRows = '';
+
+                snapshot.forEach(doc => {
+                    const d = doc.data();
+                    // Filtros locais Opcionais
+                    if (filtroProd !== "TODOS" && d.produtor !== filtroProd) return;
+                    if (filtroCeasa && (!d.ceasa || !d.ceasa.toLowerCase().includes(filtroCeasa))) return;
+
+                    totalQtd++;
+                    totalValor += d.valor || 0;
+                    totalRemonte += d.remonte || 0;
+
+                    // Converte YYYY-MM-DD para DD/MM/YYYY
+                    const dataFormatada = d.dataStr.split('-').reverse().join('/');
+
+                    htmlRows += `
+                        <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                            <td class="py-2.5 px-4"><span class="block font-bold text-gray-800">${dataFormatada}</span><span class="block text-[10px] text-gray-500 uppercase">${d.ceasa || '-'}</span></td>
+                            <td class="py-2.5 px-4 font-bold text-gray-800"><i class="ph-fill ph-tractor text-agro-500 mr-1"></i> ${d.produtor}</td>
+                            <td class="py-2.5 px-4"><span class="block font-bold text-gray-700">Vale: ${d.vale || '-'}</span><span class="block text-[10px] text-gray-500 uppercase">${d.prestador || 'Sem Prestador'}</span></td>
+                            <td class="py-2.5 px-4 text-gray-600 font-medium">${d.acao || '-'}</td>
+                            <td class="py-2.5 px-4 text-right font-black text-orange-600 bg-orange-50/30">${formatarMoeda(d.remonte || 0)}</td>
+                            <td class="py-2.5 px-4 text-right font-black text-blue-700 bg-blue-50/30">${formatarMoeda(d.valor || 0)}</td>
+                        </tr>
+                    `;
+                });
+
+                if (totalQtd === 0) {
+                    msgVazio.innerHTML = `Nenhuma descarga encontrada para este filtro.`;
+                } else {
+                    msgVazio.classList.add('hidden');
+                    container.classList.remove('hidden');
+                    cards.classList.remove('hidden');
+                    
+                    document.getElementById('resumoQtd').innerText = totalQtd;
+                    document.getElementById('resumoTotalRemonte').innerText = formatarMoeda(totalRemonte);
+                    document.getElementById('resumoTotalValor').innerText = formatarMoeda(totalValor);
+                    
+                    tbody.innerHTML = htmlRows;
+                    tfoot.innerHTML = `
+                        <tr>
+                            <td colspan="4" class="py-3 px-4 text-right font-black uppercase text-xs">TOTAL GERAL DO FILTRO:</td>
+                            <td class="py-3 px-4 text-right font-black text-orange-400 text-sm">${formatarMoeda(totalRemonte)}</td>
+                            <td class="py-3 px-4 text-right font-black text-blue-400 text-sm">${formatarMoeda(totalValor)}</td>
+                        </tr>
+                    `;
+                }
+            } catch (e) {
+                console.error(e);
+                msgVazio.innerHTML = `Erro ao buscar dados.`;
+            }
+        }
+
+        // CARREGAR HISTORICO GERAL (MODAL)
+        window.carregarHistoricoModal = async function() {
+            const tbody = document.getElementById('listaGeralBody');
+            if (!db) return;
+            tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-gray-500">Buscando registros...</td></tr>`;
+            try {
+                const snapshot = await db.collection("descargas").orderBy("dataStr", "desc").limit(300).get();
+                tbody.innerHTML = ""; descargasCacheGeral = [];
+                
+                if (snapshot.empty) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-gray-500">Nenhum registro.</td></tr>`;
+                    return;
+                }
+
+                snapshot.forEach(doc => {
+                    const d = doc.data(); const id = doc.id;
+                    descargasCacheGeral.push({ id, ...d });
+                    
+                    const dataFormatada = d.dataStr ? d.dataStr.split('-').reverse().join('/') : '-';
+
+                    const tr = document.createElement('tr'); 
+                    tr.className = "hover:bg-gray-50 border-b border-gray-100";
+                    tr.innerHTML = `
+                        <td class="p-3"><span class="block font-bold text-gray-800">${dataFormatada}</span><span class="block text-[10px] text-gray-500 uppercase">${d.ceasa || '-'}</span></td>
+                        <td class="p-3 font-bold text-gray-800">${d.produtor}</td>
+                        <td class="p-3"><span class="block font-bold text-gray-700">V: ${d.vale || '-'}</span><span class="block text-[10px] text-gray-500 uppercase">${d.prestador || '-'}</span></td>
+                        <td class="p-3 text-right font-bold text-blue-700">${formatarMoeda(d.valor || 0)}</td>
+                        <td class="p-3 text-right font-bold text-orange-600">${formatarMoeda(d.remonte || 0)}</td>
+                        <td class="p-3 text-center">
+                            <button onclick="prepararEdicao('${id}')" title="Editar" class="text-blue-500 p-1.5 rounded-md hover:bg-blue-50"><i class="ph-bold ph-pencil-simple text-lg"></i></button>
+                            <button onclick="deletarRegistro('${id}')" title="Excluir" class="text-red-500 p-1.5 rounded-md hover:bg-red-50"><i class="ph-bold ph-trash text-lg"></i></button>
+                        </td>`;
+                    tbody.appendChild(tr);
+                });
+            } catch (erro) { tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-red-500">Erro ao carregar.</td></tr>`; }
+        }
+
+        window.prepararEdicao = function(id) {
+            const d = descargasCacheGeral.find(x => x.id === id);
+            if (d) {
+                document.getElementById('descData').value = d.dataStr || '';
+                document.getElementById('descProdutor').value = d.produtor || '';
+                document.getElementById('descVale').value = d.vale || '';
+                document.getElementById('descCeasa').value = d.ceasa || '';
+                document.getElementById('descAcao').value = d.acao || '';
+                document.getElementById('descPrestador').value = d.prestador || '';
+                document.getElementById('descValor').value = d.valor || '';
+                document.getElementById('descRemonte').value = d.remonte || '';
+                
+                idDescargaEmEdicao = id; 
+                document.getElementById('tituloFormulario').innerText = "Editando Registro"; 
+                document.getElementById('btnSalvarTexto').innerText = "Atualizar Registro";
+                
+                fecharModalLista(); window.scrollTo({ top: 0, behavior: 'smooth' }); 
+            }
+        }
+
+        window.deletarRegistro = async function(id) { 
+            if(confirm("Tem certeza que deseja excluir esta descarga?")) { 
+                await db.collection("descargas").doc(id).delete(); 
+                carregarHistoricoModal(); 
+                if(document.getElementById('containerFechamento').classList.contains('hidden') === false) { gerarFechamento(); }
+            } 
+        }
+
+        // Modais
+        const modal = document.getElementById('modalLista'); 
+        window.abrirModalLista = function() { 
+            modal.classList.remove('hidden'); 
+            setTimeout(() => { modal.classList.remove('opacity-0'); }, 10); 
+            carregarHistoricoModal(); 
+        }
+        window.fecharModalLista = function() { 
+            modal.classList.add('opacity-0'); 
+            setTimeout(() => modal.classList.add('hidden'), 300); 
+        }
+    </script>
+</body>
+</html>

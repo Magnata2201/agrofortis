@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agrofortis - Painel de Vendas</title>
+    
+    <!-- BLINDAGEM NUCLEAR PARA PÁGINAS PROTEGIDAS -->
+    <script>
+        function blindagemTotal() {
+            const auth = localStorage.getItem('agrofortis_auth');
+            if (auth !== 'true') {
+                document.documentElement.style.display = 'none';
+                window.location.replace('index.html');
+            }
+        }
+        blindagemTotal();
+        setInterval(blindagemTotal, 500);
+
+        window.history.pushState(null, null, window.location.href);
+        window.addEventListener('popstate', function () { window.history.go(1); });
+    </script>
+
+    <!-- Tailwind CSS e Phosphor Icons -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script>
+        tailwind.config = { theme: { extend: { colors: { agro: { 500: '#16a34a', 600: '#15803d', 700: '#115e59' } } } } }
+    </script>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center py-8 relative font-sans px-4">
+
+    <!-- Fundo Global -->
+    <div class="fixed inset-0 z-0 bg-[url('https://images.unsplash.com/photo-1625246333195-78d9c38ad449?q=80&w=1920&auto=format&fit=crop')] bg-cover bg-center">
+        <div class="absolute inset-0 bg-green-950/90 backdrop-blur-sm"></div>
+    </div>
+
+    <main class="z-10 w-full max-w-6xl flex flex-col items-center">
+        <!-- Header da Página -->
+        <div class="flex items-center gap-3 mb-6">
+            <div class="bg-white/10 p-3 rounded-xl border border-white/20 shadow-lg backdrop-blur-md">
+                <i class="ph-fill ph-shopping-cart text-4xl text-agro-500"></i>
+            </div>
+            <h1 class="text-3xl font-bold tracking-wide text-white">Agro<span class="text-agro-500">fortis</span></h1>
+        </div>
+
+        <div class="bg-white w-full rounded-3xl shadow-2xl p-6 md:p-8 border border-gray-100 relative mb-8">
+            
+            <!-- TOPO: TÍTULO E USUÁRIO LOGADO -->
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-gray-100 pb-5 mb-6 gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                        <i class="ph-fill ph-storefront text-agro-500"></i> <span id="tituloFormulario">Painel de Vendas</span>
+                    </h2>
+                    <p class="text-gray-500 text-sm mt-1">Selecione os produtos por fornecedor ou por fruta.</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="bg-blue-50 border border-blue-200 text-blue-800 px-3 py-1.5 rounded-lg flex items-center gap-2 text-sm font-bold shadow-sm">
+                        <i class="ph-fill ph-user-circle text-xl"></i>
+                        <span id="nomeOperadorDisplay">Operador</span>
+                    </div>
+                    <button onclick="abrirModalHistoricoVendas()" class="bg-gray-800 hover:bg-agro-600 text-white text-sm font-semibold py-2.5 px-4 rounded-xl flex items-center gap-2 shadow-md transition-colors">
+                        <i class="ph-bold ph-list-dashes text-agro-500"></i> Histórico de Vendas
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                
+                <!-- COLUNA ESQUERDA: BUSCA E CATÁLOGO -->
+                <div class="lg:col-span-7 flex flex-col gap-6">
+                    
+                    <!-- Modos de Busca -->
+                    <div class="bg-gray-50 p-1.5 rounded-xl border border-gray-200 flex text-sm font-bold shadow-inner">
+                        <button id="btnModoFornecedor" onclick="setModoBusca('fornecedor')" class="flex-1 py-2.5 text-center rounded-lg bg-white text-agro-600 shadow border border-gray-200 transition-all flex items-center justify-center gap-2">
+                            <i class="ph-bold ph-tractor"></i> Buscar por Fornecedor
+                        </button>
+                        <button id="btnModoFruta" onclick="setModoBusca('fruta')" class="flex-1 py-2.5 text-center rounded-lg text-gray-500 hover:text-gray-700 transition-all flex items-center justify-center gap-2">
+                            <i class="ph-bold ph-apple-logo"></i> Buscar por Fruta
+                        </button>
+                    </div>
+
+                    <!-- Área de Filtro (Muda conforme o modo) -->
+                    <div id="areaFiltroFornecedor" class="bg-white border border-gray-200 p-4 rounded-xl shadow-sm">
+                        <label class="block text-gray-700 text-xs font-bold uppercase tracking-wide mb-2">Selecione o Fornecedor (Produtor):</label>
+                        <select id="selectFornecedor" onchange="renderizarCatalogo()" class="w-full bg-gray-50 border border-gray-300 text-gray-800 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-agro-500 font-semibold cursor-pointer">
+                            <option value="" disabled selected>Carregando fornecedores...</option>
+                        </select>
+                    </div>
+
+                    <div id="areaFiltroFruta" class="bg-white border border-gray-200 p-4 rounded-xl shadow-sm hidden">
+                        <label class="block text-gray-700 text-xs font-bold uppercase tracking-wide mb-2">Selecione a Fruta:</label>
+                        <select id="selectFruta" onchange="renderizarCatalogo()" class="w-full bg-gray-50 border border-gray-300 text-gray-800 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-agro-500 font-semibold cursor-pointer">
+                            <option value="" disabled selected>Carregando frutas...</option>
+                        </select>
+                    </div>
+
+                    <!-- Resultados da Busca (Catálogo) -->
+                    <div>
+                        <h3 class="text-sm font-bold text-gray-800 mb-3 border-b border-gray-200 pb-2 uppercase"><i class="ph-fill ph-magnifying-glass text-agro-500"></i> Resultados Disponíveis</h3>
+                        <div id="catalogoResultados" class="flex flex-col gap-3 max-h-[500px] overflow-y-auto pr-2">
+                            <div class="text-center text-gray-400 text-sm italic py-8 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                                Selecione uma opção acima para ver as frutas.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- COLUNA DIREITA: CARRINHO DE VENDAS -->
+                <div class="lg:col-span-5 bg-gray-50 rounded-2xl border border-gray-200 flex flex-col h-full shadow-sm">
+                    <div class="p-4 border-b border-gray-200 bg-gray-100 rounded-t-2xl flex items-center justify-between">
+                        <h3 class="font-bold text-gray-800 flex items-center gap-2"><i class="ph-fill ph-shopping-cart-simple text-agro-600 text-xl"></i> Resumo da Venda</h3>
+                        <span class="bg-agro-100 text-agro-800 text-[10px] font-black uppercase px-2 py-1 rounded-md" id="contadorCarrinho">0 Itens</span>
+                    </div>
+                    
+                    <!-- Lista de Itens do Carrinho -->
+                    <div class="flex-1 p-4 overflow-y-auto max-h-[400px]" id="listaCarrinho">
+                        <div class="text-center text-gray-400 text-sm italic py-10">O carrinho está vazio.</div>
+                    </div>
+
+                    <!-- Rodapé do Carrinho (Fechamento) -->
+                    <div class="p-4 border-t border-gray-200 bg-white rounded-b-2xl">
+                        <div class="mb-4">
+                            <label class="block text-gray-700 text-xs font-bold uppercase tracking-wide mb-1">Cliente (Comprador)</label>
+                            <select id="selectCliente" class="w-full bg-gray-50 border border-gray-300 text-gray-800 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-agro-500 font-semibold cursor-pointer">
+                                <option value="" disabled selected>Selecionar Cliente...</option>
+                            </select>
+                        </div>
+                        
+                        <div class="flex justify-between items-center mb-4 bg-gray-800 p-4 rounded-xl shadow-inner text-white">
+                            <span class="text-xs font-bold uppercase text-gray-400 tracking-wider">Total da Venda</span>
+                            <span class="text-2xl font-black text-green-400" id="totalVendaTexto">R$ 0,00</span>
+                        </div>
+
+                        <button onclick="finalizarVenda()" id="btnFinalizarVenda" class="w-full bg-agro-600 hover:bg-agro-500 text-white font-bold py-3.5 px-4 rounded-xl transition-colors shadow-lg flex items-center justify-center gap-2">
+                            <i class="ph-bold ph-check-circle text-lg"></i> Finalizar Venda
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <a href="sistema.html" class="mb-8 text-white/80 hover:text-white flex items-center gap-2 text-sm font-medium bg-black/30 hover:bg-black/50 px-6 py-3 rounded-full border border-white/10 backdrop-blur-md transition-colors">
+            <i class="ph-bold ph-arrow-left"></i> Voltar ao Painel Principal
+        </a>
+    </main>
+
+    <!-- Modal Histórico de Vendas -->
+    <div id="modalHistoricoVendas" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 opacity-0 transition-opacity duration-300">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="fecharModalHistoricoVendas()"></div>
+        <div class="bg-white w-full max-w-7xl rounded-3xl shadow-2xl relative z-10 flex flex-col max-h-[90vh] transform scale-95 transition-transform duration-300">
+            
+            <div class="p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-gray-100 gap-4 shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="bg-green-50 p-2 rounded-lg text-agro-600"><i class="ph-fill ph-receipt text-2xl"></i></div>
+                    <div><h2 class="text-xl font-bold text-gray-800">Histórico de Vendas</h2><p class="text-sm text-gray-500">Acompanhe as vendas registadas.</p></div>
+                </div>
+                
+                <div class="flex flex-col sm:flex-row items-center gap-2" id="areaFiltrosAdmin">
+                    <!-- JS Injetará filtros de admin aqui -->
+                </div>
+
+                <button onclick="fecharModalHistoricoVendas()" class="text-gray-400 hover:text-red-500 p-2 rounded-xl sm:ml-4"><i class="ph-bold ph-x text-xl"></i></button>
+            </div>
+
+            <div class="overflow-auto flex-1 p-6 bg-gray-50">
+                <table class="w-full text-left border-collapse whitespace-nowrap text-sm bg-white border border-gray-200 shadow-sm rounded-lg overflow-hidden">
+                    <thead class="bg-gray-100 text-gray-600 text-[10px] uppercase tracking-wider border-b border-gray-200">
+                        <tr>
+                            <th class="py-3 px-4 font-bold">Data</th>
+                            <th class="py-3 px-4 font-bold">Cliente</th>
+                            <th class="py-3 px-4 font-bold text-center">Itens (Frutas)</th>
+                            <th class="py-3 px-4 font-bold text-right">Valor Total</th>
+                            <th class="py-3 px-4 font-bold text-blue-700 bg-blue-50">Registrado Por</th>
+                            <th class="py-3 px-4 font-bold text-center">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="listaHistoricoBody" class="text-gray-700">
+                        <!-- Povoado pelo JS -->
+                    </tbody>
+                    <tfoot id="rodapeTotaisAdmin" class="bg-gray-800 text-white font-bold hidden">
+                        <!-- Povoado pelo JS -->
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        let db = null;
+        let modoAtual = 'fornecedor'; // 'fornecedor' ou 'fruta'
+        
+        let dadosProdutores = []; // Guarda os objetos completos dos produtores
+        let indiceFrutasGlobal = {}; // { "Maca": [ {produtorNome, produtorId, frutaDetalhes} ] }
+        let itensCarrinho = [];
+        
+        const formatarMoeda = (valor) => Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+        // Identifica o Operador Logado e Permissões
+        const nomeUsuarioLogado = localStorage.getItem('agrofortis_user_name') || 'Admin';
+        const permissoesUsuarioLogado = JSON.parse(localStorage.getItem('agrofortis_user_perms') || '{}');
+        const isAdmin = permissoesUsuarioLogado.usuarios === true;
+        
+        document.getElementById('nomeOperadorDisplay').innerText = nomeUsuarioLogado;
+
+        function inicializarFirebase() {
+            const clustersSalvos = localStorage.getItem('agrofortis_firebase_clusters');
+            if (clustersSalvos && JSON.parse(clustersSalvos).length > 0) {
+                try { 
+                    firebase.initializeApp(JSON.parse(clustersSalvos)[0]); 
+                    db = firebase.firestore(); 
+                    carregarDadosBase();
+                } catch (error) { console.error(error); }
+            }
+        }
+        window.onload = inicializarFirebase;
+
+        async function carregarDadosBase() {
+            if (!db) return;
+            try {
+                // 1. Carregar Clientes
+                const snapClientes = await db.collection("clientes").orderBy("nome", "asc").get();
+                const selCliente = document.getElementById('clienteSelect');
+                let htmlClientes = '<option value="" disabled selected>Selecionar Cliente (Comprador)...</option>';
+                snapClientes.forEach(doc => { htmlClientes += `<option value="${doc.id}">${doc.data().nome}</option>`; });
+                document.getElementById('selectCliente').innerHTML = htmlClientes;
+
+                // 2. Carregar Produtores e montar índices
+                const snapProdutores = await db.collection("produtores").orderBy("nome", "asc").get();
+                let htmlProdutores = '<option value="" disabled selected>-- Escolha um Fornecedor --</option>';
+                
+                dadosProdutores = [];
+                indiceFrutasGlobal = {};
+
+                snapProdutores.forEach(doc => {
+                    const prod = { id: doc.id, ...doc.data() };
+                    dadosProdutores.push(prod);
+                    htmlProdutores += `<option value="${prod.id}">${prod.nome}</option>`;
+                    
+                    // Alimenta o índice global de frutas
+                    if(prod.produtos && Array.isArray(prod.produtos)) {
+                        prod.produtos.forEach(fruta => {
+                            const nomeFruta = fruta.nome.trim();
+                            if(!indiceFrutasGlobal[nomeFruta]) {
+                                indiceFrutasGlobal[nomeFruta] = [];
+                            }
+                            indiceFrutasGlobal[nomeFruta].push({
+                                produtorId: prod.id,
+                                produtorNome: prod.nome,
+                                detalhe: fruta
+                            });
+                        });
+                    }
+                });
+                
+                document.getElementById('selectFornecedor').innerHTML = htmlProdutores;
+
+                // 3. Montar Select de Frutas Únicas
+                let htmlFrutas = '<option value="" disabled selected>-- Escolha uma Fruta --</option>';
+                const nomesFrutasUnicas = Object.keys(indiceFrutasGlobal).sort();
+                nomesFrutasUnicas.forEach(nome => {
+                    htmlFrutas += `<option value="${nome}">${nome}</option>`;
+                });
+                document.getElementById('selectFruta').innerHTML = htmlFrutas;
+
+            } catch (e) {
+                console.error("Erro ao carregar dados base", e);
+            }
+        }
+
+        // ALTERNÂNCIA DE MODO DE BUSCA
+        window.setModoBusca = function(modo) {
+            modoAtual = modo;
+            const btnForn = document.getElementById('btnModoFornecedor');
+            const btnFruta = document.getElementById('btnModoFruta');
+            const areaForn = document.getElementById('areaFiltroFornecedor');
+            const areaFruta = document.getElementById('areaFiltroFruta');
+            
+            document.getElementById('catalogoResultados').innerHTML = `<div class="text-center text-gray-400 text-sm italic py-8 bg-gray-50 rounded-xl border border-dashed border-gray-300">Selecione uma opção acima para ver os produtos.</div>`;
+            document.getElementById('selectFornecedor').selectedIndex = 0;
+            document.getElementById('selectFruta').selectedIndex = 0;
+
+            if (modo === 'fornecedor') {
+                btnForn.className = "flex-1 py-2.5 text-center rounded-lg bg-white text-agro-600 shadow border border-gray-200 transition-all flex items-center justify-center gap-2";
+                btnFruta.className = "flex-1 py-2.5 text-center rounded-lg text-gray-500 hover:text-gray-700 transition-all flex items-center justify-center gap-2";
+                areaForn.classList.remove('hidden');
+                areaFruta.classList.add('hidden');
+            } else {
+                btnFruta.className = "flex-1 py-2.5 text-center rounded-lg bg-white text-agro-600 shadow border border-gray-200 transition-all flex items-center justify-center gap-2";
+                btnForn.className = "flex-1 py-2.5 text-center rounded-lg text-gray-500 hover:text-gray-700 transition-all flex items-center justify-center gap-2";
+                areaFruta.classList.remove('hidden');
+                areaForn.classList.add('hidden');
+            }
+        }
+
+        // RENDERIZA OS CARDS NO CATÁLOGO
+        window.renderizarCatalogo = function() {
+            const container = document.getElementById('catalogoResultados');
+            container.innerHTML = '';
+            
+            if (modoAtual === 'fornecedor') {
+                const prodId = document.getElementById('selectFornecedor').value;
+                if(!prodId) return;
+                
+                const prod = dadosProdutores.find(p => p.id === prodId);
+                if (!prod || !prod.produtos || prod.produtos.length === 0) {
+                    container.innerHTML = `<div class="text-center text-red-400 text-sm italic py-8 bg-red-50 rounded-xl border border-red-100">Este produtor não possui frutas cadastradas.</div>`;
+                    return;
+                }
+
+                prod.produtos.forEach((fruta, index) => {
+                    container.appendChild(criarCardFruta(fruta, prod.id, prod.nome));
+                });
+
+            } else if (modoAtual === 'fruta') {
+                const nomeFruta = document.getElementById('selectFruta').value;
+                if(!nomeFruta) return;
+                
+                const listaVendedores = indiceFrutasGlobal[nomeFruta];
+                if (!listaVendedores || listaVendedores.length === 0) {
+                    container.innerHTML = `<div class="text-center text-red-400 text-sm italic py-8">Nenhum produtor tem esta fruta.</div>`;
+                    return;
+                }
+
+                listaVendedores.forEach((item, index) => {
+                    container.appendChild(criarCardFruta(item.detalhe, item.produtorId, item.produtorNome));
+                });
+            }
+        }
+
+        // CRIA O CARD DE PRODUTO INDIVIDUAL
+        function criarCardFruta(fruta, produtorId, produtorNome) {
+            // Um identificador único temporário para os inputs do card
+            const uniqId = Math.random().toString(36).substr(2, 9);
+            
+            const div = document.createElement('div');
+            div.className = "bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col sm:flex-row gap-4 items-center justify-between";
+            
+            div.innerHTML = `
+                <div class="flex-1 w-full">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="bg-green-100 text-green-700 text-[10px] font-black uppercase px-2 py-0.5 rounded shadow-sm border border-green-200">${fruta.tipo}</span>
+                        ${fruta.taxa > 0 ? `<span class="bg-blue-100 text-blue-700 text-[9px] font-black uppercase px-1.5 py-0.5 rounded">Comis: ${fruta.taxa}%</span>` : ''}
+                    </div>
+                    <h4 class="text-lg font-bold text-gray-800">${fruta.nome}</h4>
+                    <p class="text-xs text-gray-500 font-medium mb-1"><i class="ph-fill ph-tractor text-gray-400"></i> Fornecedor: <strong class="text-gray-700">${produtorNome}</strong></p>
+                    <p class="text-[10px] text-gray-400 uppercase tracking-wide">Emb: ${fruta.embalagem} | Peso: ${fruta.peso}</p>
+                </div>
+                
+                <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto items-end">
+                    <div>
+                        <label class="block text-[10px] text-gray-500 font-bold uppercase mb-1">Qtd (Cx)</label>
+                        <input type="number" id="qtd_${uniqId}" min="1" placeholder="0" class="w-16 sm:w-20 bg-gray-50 border border-gray-300 rounded-lg px-2 py-2 text-sm text-center focus:outline-none focus:border-agro-500 font-bold text-gray-800">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-gray-500 font-bold uppercase mb-1">R$ Unit</label>
+                        <input type="number" step="0.01" id="preco_${uniqId}" placeholder="0.00" class="w-20 sm:w-24 bg-gray-50 border border-gray-300 rounded-lg px-2 py-2 text-sm text-center focus:outline-none focus:border-agro-500 font-bold text-gray-800">
+                    </div>
+                    <button onclick="adicionarAoCarrinhoLogica('${fruta.nome}', '${fruta.tipo}', '${produtorId}', '${produtorNome}', '${uniqId}')" class="bg-agro-600 hover:bg-agro-500 text-white p-2.5 rounded-lg shadow transition-colors flex items-center justify-center">
+                        <i class="ph-bold ph-plus text-lg"></i>
+                    </button>
+                </div>
+            `;
+            return div;
+        }
+
+        // LÓGICA DO CARRINHO
+        window.adicionarAoCarrinhoLogica = function(nomeFruta, tipoFruta, prodId, prodNome, uniqId) {
+            const inputQtd = document.getElementById(`qtd_${uniqId}`);
+            const inputPreco = document.getElementById(`preco_${uniqId}`);
+            
+            const qtd = parseInt(inputQtd.value);
+            const preco = parseFloat(inputPreco.value);
+
+            if (isNaN(qtd) || qtd <= 0) return alert("Informe uma quantidade válida.");
+            if (isNaN(preco) || preco <= 0) return alert("Informe um valor unitário válido.");
+
+            const subtotal = qtd * preco;
+
+            itensCarrinho.push({
+                fruta: nomeFruta,
+                tipo: tipoFruta,
+                produtorId: prodId,
+                produtorNome: prodNome,
+                quantidade: qtd,
+                precoUnitario: preco,
+                subtotal: subtotal
+            });
+
+            // Limpa os campos após adicionar
+            inputQtd.value = '';
+            inputPreco.value = '';
+
+            atualizarCarrinhoVisual();
+        }
+
+        window.removerDoCarrinho = function(index) {
+            itensCarrinho.splice(index, 1);
+            atualizarCarrinhoVisual();
+        }
+
+        function atualizarCarrinhoVisual() {
+            const container = document.getElementById('listaCarrinho');
+            const totalTexto = document.getElementById('totalVendaTexto');
+            const contador = document.getElementById('contadorCarrinho');
+            
+            contador.innerText = `${itensCarrinho.length} Itens`;
+            
+            if (itensCarrinho.length === 0) {
+                container.innerHTML = `<div class="text-center text-gray-400 text-sm italic py-10">O carrinho está vazio.</div>`;
+                totalTexto.innerText = "R$ 0,00";
+                return;
+            }
+
+            let html = '';
+            let totalGeral = 0;
+
+            itensCarrinho.forEach((item, index) => {
+                totalGeral += item.subtotal;
+                html += `
+                    <div class="bg-white border border-gray-200 rounded-lg p-3 mb-2 shadow-sm flex items-center justify-between">
+                        <div>
+                            <div class="font-bold text-gray-800 text-sm leading-tight">${item.fruta} <span class="text-gray-500 font-normal text-xs">(${item.tipo})</span></div>
+                            <div class="text-[9px] font-bold text-gray-400 uppercase tracking-wider mt-0.5">Forn: ${item.produtorNome}</div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <div class="text-right">
+                                <div class="text-xs font-medium text-gray-500">${item.quantidade}x ${formatarMoeda(item.precoUnitario)}</div>
+                                <div class="text-sm font-black text-green-600">${formatarMoeda(item.subtotal)}</div>
+                            </div>
+                            <button onclick="removerDoCarrinho(${index})" class="text-red-400 hover:text-red-600 p-1 bg-red-50 rounded"><i class="ph-bold ph-trash"></i></button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+            totalTexto.innerText = formatarMoeda(totalGeral);
+            
+            // Rolar para o final do carrinho
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // FINALIZAR VENDA
+        window.finalizarVenda = async function() {
+            if (!db) return alert("Erro: Firebase não conectado.");
+            
+            const selectCliente = document.getElementById('selectCliente');
+            const clienteId = selectCliente.value;
+            const clienteNome = selectCliente.options[selectCliente.selectedIndex]?.text;
+            
+            if (!clienteId) return alert("Por favor, selecione um Cliente (Comprador) antes de finalizar.");
+            if (itensCarrinho.length === 0) return alert("O carrinho está vazio.");
+
+            const btn = document.getElementById('btnFinalizarVenda');
+            const htmlOriginal = btn.innerHTML;
+            btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin text-lg"></i> Processando...`;
+            btn.disabled = true;
+
+            const totalVenda = itensCarrinho.reduce((acc, item) => acc + item.subtotal, 0);
+            
+            // Agrupar nome dos produtores para busca fácil
+            const produtoresEnvolvidos = [...new Set(itensCarrinho.map(i => i.produtorNome))].join(', ');
+            
+            // Para poder filtrar facilmente, salvamos a data local em formato string YYYY-MM-DD
+            const dataVendaAtual = new Date();
+            const offset = dataVendaAtual.getTimezoneOffset() * 60000;
+            const dataVendaStr = (new Date(dataVendaAtual - offset)).toISOString().split('T')[0];
+
+            const dadosVenda = {
+                clienteId: clienteId,
+                clienteNome: clienteNome,
+                produtoresNomes: produtoresEnvolvidos,
+                itens: itensCarrinho,
+                valorTotal: totalVenda,
+                dataStr: dataVendaStr, // string para busca rapida
+                dataCriacao: firebase.firestore.FieldValue.serverTimestamp(),
+                registradoPor: nomeUsuarioLogado
+            };
+
+            try {
+                await db.collection("vendas").add(dadosVenda);
+                alert("Venda finalizada e registrada com sucesso!");
+                
+                // Limpar tudo
+                itensCarrinho = [];
+                selectCliente.selectedIndex = 0;
+                atualizarCarrinhoVisual();
+
+            } catch (error) {
+                console.error(error);
+                alert("Erro ao registrar a venda.");
+            } finally {
+                btn.innerHTML = htmlOriginal;
+                btn.disabled = false;
+            }
+        }
+
+
+        // =======================================
+        // MODAL HISTÓRICO DE VENDAS E FILTROS ADMIN
+        // =======================================
+        const modalHistorico = document.getElementById('modalHistoricoVendas');
+
+        function injetarFiltrosAdmin() {
+            const areaFiltros = document.getElementById('areaFiltrosAdmin');
+            const hojeIso = new Date().toISOString().split('T')[0];
+            
+            if(isAdmin) {
+                areaFiltros.innerHTML = `
+                    <div class="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg p-2">
+                        <select id="filtroVendedorAdmin" class="bg-white border border-gray-300 rounded px-2 py-1.5 text-xs focus:outline-none focus:border-blue-500">
+                            <option value="TODOS">Todos os Vendedores</option>
+                        </select>
+                        <input type="date" id="filtroDataInicioAdmin" value="${hojeIso}" class="bg-white border border-gray-300 rounded px-2 py-1.5 text-xs focus:outline-none focus:border-blue-500">
+                        <input type="date" id="filtroDataFimAdmin" value="${hojeIso}" class="bg-white border border-gray-300 rounded px-2 py-1.5 text-xs focus:outline-none focus:border-blue-500">
+                        <button onclick="carregarHistoricoVendasFiltrado()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-1.5 px-3 rounded shadow-sm flex items-center gap-1 text-xs">
+                            <i class="ph-bold ph-funnel"></i> Filtrar
+                        </button>
+                    </div>
+                `;
+                povoarSelectVendedoresAdmin();
+            } else {
+                areaFiltros.innerHTML = ``;
+            }
+        }
+        
+        async function povoarSelectVendedoresAdmin() {
+            if(!db) return;
+            try {
+                const snapUsuarios = await db.collection("usuarios").orderBy("nome", "asc").get();
+                let htmlOps = '<option value="TODOS">Todos os Vendedores</option>';
+                // Mesmo nao estando na tabela usuários, adicionamos o proprio admin hardcoded
+                htmlOps += `<option value="Administrador Master">Administrador Master</option>`;
+                snapUsuarios.forEach(u => {
+                    htmlOps += `<option value="${u.data().nome}">${u.data().nome}</option>`;
+                });
+                document.getElementById('filtroVendedorAdmin').innerHTML = htmlOps;
+            } catch (e) {}
+        }
+
+        window.abrirModalHistoricoVendas = async function() {
+            injetarFiltrosAdmin();
+            modalHistorico.classList.remove('hidden');
+            setTimeout(() => modalHistorico.classList.remove('opacity-0'), 10);
+            carregarHistoricoVendasFiltrado();
+        }
+
+        window.carregarHistoricoVendasFiltrado = async function() {
+            const tbody = document.getElementById('listaHistoricoBody');
+            const tfoot = document.getElementById('rodapeTotaisAdmin');
+            tfoot.classList.add('hidden');
+            
+            tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-gray-500"><i class="ph-bold ph-spinner animate-spin text-xl inline-block mb-2"></i><br>Buscando vendas...</td></tr>`;
+            
+            if (!db) return;
+            
+            let fInicio = null;
+            let fFim = null;
+            let fVendedor = 'TODOS';
+
+            if(isAdmin) {
+                fInicio = document.getElementById('filtroDataInicioAdmin').value;
+                fFim = document.getElementById('filtroDataFimAdmin').value;
+                fVendedor = document.getElementById('filtroVendedorAdmin').value;
+            }
+            
+            try {
+                // Sem exigir Índices Extras na Firebase: Baixa as últimas 300 e filtra via JS.
+                const snapshot = await db.collection("vendas").orderBy("dataCriacao", "desc").limit(300).get();
+                tbody.innerHTML = '';
+                
+                let qtdVendasFiltradas = 0;
+                let valorTotalFiltrado = 0;
+                
+                let hasResults = false;
+                
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const id = doc.id;
+                    
+                    // FILTRO LOCAL NO NAVEGADOR E RESTRIÇÃO DE USUÁRIO
+                    if (isAdmin) {
+                        if (fVendedor !== 'TODOS' && data.registradoPor !== fVendedor) return;
+                        if (fInicio && data.dataStr && data.dataStr < fInicio) return;
+                        if (fFim && data.dataStr && data.dataStr > fFim) return;
+                    } else {
+                        // Segurança: Usuário comum (não admin) só pode ver e contabilizar a si mesmo
+                        if (data.registradoPor !== nomeUsuarioLogado) return;
+                    }
+
+                    hasResults = true;
+                    qtdVendasFiltradas++;
+                    valorTotalFiltrado += data.valorTotal || 0;
+                    
+                    const date = data.dataCriacao ? (data.dataCriacao.toDate ? data.dataCriacao.toDate() : new Date(data.dataCriacao)) : new Date();
+                    const dataStr = date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+                    
+                    const resumoItens = data.itens ? data.itens.map(i => `${i.fruta} (${i.quantidade}cx)`).join(', ') : 'Sem itens';
+                    
+                    const btnDeletar = isAdmin ? `<button onclick="deletarVenda('${id}')" class="bg-red-50 hover:bg-red-100 text-red-600 font-bold py-1.5 px-3 rounded-lg text-xs transition-colors shadow-sm"><i class="ph-bold ph-trash"></i></button>` : `<span class="text-gray-300 text-xs">-</span>`;
+
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-gray-50 border-b border-gray-100 transition-colors";
+                    tr.innerHTML = `
+                        <td class="py-3 px-4 font-bold text-gray-700">${dataStr}</td>
+                        <td class="py-3 px-4 font-bold text-gray-900"><i class="ph-fill ph-storefront text-blue-500 mr-1"></i> ${data.clienteNome}</td>
+                        <td class="py-3 px-4 text-xs text-gray-500 max-w-[200px] truncate" title="${resumoItens}">${resumoItens}</td>
+                        <td class="py-3 px-4 text-right font-black text-green-600">${formatarMoeda(data.valorTotal)}</td>
+                        <td class="py-3 px-4 text-blue-800 font-bold text-[10px] uppercase tracking-wider bg-blue-50/50"><i class="ph-fill ph-user-circle mr-1"></i> ${data.registradoPor || 'Sistema'}</td>
+                        <td class="py-3 px-4 text-center">${btnDeletar}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                if(!hasResults) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-gray-500 italic">Nenhuma venda encontrada no período.</td></tr>`;
+                } else if(isAdmin) {
+                    tfoot.innerHTML = `
+                        <tr>
+                            <td colspan="3" class="py-3 px-4 text-right uppercase text-[11px]">Total Filtrado (${qtdVendasFiltradas} vendas):</td>
+                            <td class="py-3 px-4 text-right text-green-400 text-sm">${formatarMoeda(valorTotalFiltrado)}</td>
+                            <td colspan="2"></td>
+                        </tr>
+                    `;
+                    tfoot.classList.remove('hidden');
+                }
+
+            } catch(e) {
+                console.error(e);
+                tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-red-500">Erro ao carregar o histórico.</td></tr>`;
+            }
+        }
+
+        window.fecharModalHistoricoVendas = function() {
+            modalHistorico.classList.add('opacity-0');
+            setTimeout(() => modalHistorico.classList.add('hidden'), 300);
+        }
+
+        window.deletarVenda = async function(id) {
+            if(confirm("Excluir esta venda permanentemente do histórico?")) {
+                await db.collection("vendas").doc(id).delete();
+                carregarHistoricoVendasFiltrado(); // recarrega a lista
+            }
+        }
+    </script>
+</body>
+</html>

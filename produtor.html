@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agrofortis - Produtor e Frutas</title>
+    
+    <!-- BLINDAGEM NUCLEAR PARA PÁGINAS PROTEGIDAS -->
+    <script>
+        function blindagemTotal() {
+            const auth = localStorage.getItem('agrofortis_auth');
+            const perms = JSON.parse(localStorage.getItem('agrofortis_user_perms') || '{}');
+            if (auth !== 'true') {
+                document.documentElement.style.display = 'none';
+                window.location.replace('index.html');
+            } else if (perms.produtores !== true) {
+                document.documentElement.style.display = 'none';
+                window.location.replace('sistema.html');
+            }
+        }
+        blindagemTotal();
+        setInterval(blindagemTotal, 500);
+
+        window.history.pushState(null, null, window.location.href);
+        window.addEventListener('popstate', function () { window.history.go(1); });
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script>
+        tailwind.config = {
+            theme: { extend: { colors: { agro: { 500: '#16a34a', 600: '#15803d', 700: '#115e59' } } } }
+        }
+    </script>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center relative font-sans p-4">
+
+    <div class="fixed inset-0 z-0 bg-[url('https://images.unsplash.com/photo-1625246333195-78d9c38ad449?q=80&w=1920&auto=format&fit=crop')] bg-cover bg-center">
+        <div class="absolute inset-0 bg-green-950/90 backdrop-blur-sm"></div>
+    </div>
+
+    <main class="z-10 w-full max-w-5xl flex flex-col items-center my-8">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="bg-white/10 p-3 rounded-xl border border-white/20 shadow-lg backdrop-blur-md">
+                <i class="ph-fill ph-plant text-4xl text-agro-500"></i>
+            </div>
+            <h1 class="text-3xl font-bold tracking-wide text-white">Agro<span class="text-agro-500">fortis</span></h1>
+        </div>
+
+        <div class="bg-white w-full rounded-3xl shadow-2xl p-6 md:p-8 border border-gray-100 relative">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-gray-100 pb-5 mb-6 gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                        <i class="ph-fill ph-tractor text-agro-500"></i> Dados do Produtor
+                    </h2>
+                    <p class="text-gray-500 text-sm mt-1">Cadastre um novo ou busque um existente.</p>
+                </div>
+                <button onclick="abrirModalBusca()" class="bg-gray-800 hover:bg-agro-600 text-white text-sm font-semibold py-2.5 px-5 rounded-xl flex items-center gap-2">
+                    <i class="ph-bold ph-magnifying-glass text-agro-500"></i> Buscar Produtor
+                </button>
+            </div>
+
+            <form id="formProdutor" class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+                <div class="md:col-span-1">
+                    <label class="block text-gray-600 text-sm font-semibold mb-2">Nome do Produtor</label>
+                    <div class="relative">
+                        <i class="ph ph-user absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
+                        <input type="text" id="prodNome" class="w-full bg-gray-50 border border-gray-200 rounded-xl pl-12 pr-4 py-3 focus:outline-none focus:border-agro-500 font-medium">
+                    </div>
+                </div>
+                <div class="md:col-span-1">
+                    <label class="block text-gray-600 text-sm font-semibold mb-2">CPF ou CNPJ</label>
+                    <div class="relative">
+                        <i class="ph ph-identification-card absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
+                        <input type="text" id="prodCpf" class="w-full bg-gray-50 border border-gray-200 rounded-xl pl-12 pr-4 py-3 focus:outline-none focus:border-agro-500 font-medium">
+                    </div>
+                </div>
+                <div class="md:col-span-1">
+                    <label class="block text-gray-600 text-sm font-semibold mb-2 text-blue-600">Comissão Geral (%)</label>
+                    <div class="relative">
+                        <i class="ph ph-percent absolute left-4 top-1/2 -translate-y-1/2 text-blue-400 text-lg"></i>
+                        <input type="number" step="0.1" id="prodComissao" class="w-full bg-blue-50 border border-blue-200 rounded-xl pl-12 pr-4 py-3 focus:outline-none focus:border-blue-500 font-bold">
+                    </div>
+                </div>
+                
+                <div class="md:col-span-3 flex justify-end gap-3 mt-2">
+                    <button type="button" onclick="limparProdutor()" class="text-gray-500 hover:bg-gray-100 font-semibold py-2 px-5 rounded-xl">Limpar</button>
+                    <button type="button" onclick="salvarProdutor()" class="bg-agro-600 hover:bg-agro-500 text-white font-bold py-2 px-6 rounded-xl flex items-center gap-2">
+                        <i class="ph-bold ph-floppy-disk"></i> Salvar Produtor
+                    </button>
+                </div>
+            </form>
+
+            <div id="painelFrutas" class="hidden animate-fade-in border-t border-gray-100 pt-6">
+                <h3 class="text-lg font-bold text-gray-700 mb-4 flex items-center gap-2">
+                    <i class="ph-bold ph-orange-slice text-agro-500"></i> Frutas de <span id="nomeProdutorSelecionado" class="text-gray-900 underline decoration-agro-500"></span>
+                </h3>
+                
+                <div class="bg-green-50/50 border border-green-100 p-4 rounded-2xl mb-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 items-end">
+                        <div><label class="block text-xs font-semibold mb-1">Fruta</label><input type="text" id="frutaNome" class="w-full border rounded-lg px-3 py-2"></div>
+                        <div><label class="block text-xs font-semibold mb-1">Tipo</label><input type="text" id="frutaTipo" class="w-full border rounded-lg px-3 py-2"></div>
+                        <div><label class="block text-xs font-semibold mb-1">Embalagem</label><input type="text" id="frutaEmbalagem" class="w-full border rounded-lg px-3 py-2"></div>
+                        <div><label class="block text-xs font-semibold mb-1">Peso</label><input type="text" id="frutaPeso" class="w-full border rounded-lg px-3 py-2"></div>
+                        <div>
+                            <label class="block text-xs font-semibold mb-1">Taxa Extra/Item (%)</label>
+                            <div class="flex gap-2">
+                                <input type="number" step="0.1" id="frutaTaxa" class="w-full border rounded-lg px-3 py-2">
+                                <button type="button" onclick="adicionarFrutaAoBanco()" class="bg-gray-800 text-white p-2 rounded-lg"><i class="ph-bold ph-plus"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white border rounded-xl overflow-hidden overflow-x-auto">
+                    <table class="w-full text-left text-sm whitespace-nowrap">
+                        <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
+                            <tr><th class="px-4 py-3">Fruta</th><th class="px-4 py-3">Tipo</th><th class="px-4 py-3">Embalagem</th><th class="px-4 py-3">Peso</th><th class="px-4 py-3">Taxa Extra</th><th class="px-4 py-3 text-center">Remover</th></tr>
+                        </thead>
+                        <tbody id="tabelaFrutasProdutor" class="text-gray-700"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <a href="sistema.html" class="mt-6 text-white/80 hover:text-white flex items-center gap-2 text-sm font-medium transition-colors bg-black/30 hover:bg-black/50 px-6 py-3 rounded-full border border-white/10 backdrop-blur-md">
+            <i class="ph-bold ph-arrow-left"></i> Voltar ao Painel Principal
+        </a>
+    </main>
+
+    <div id="modalBusca" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 opacity-0 transition-opacity duration-300">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="fecharModalBusca()"></div>
+        <div class="bg-white w-full max-w-4xl rounded-3xl shadow-2xl relative z-10 flex flex-col max-h-[85vh] transform scale-95 transition-transform duration-300" id="modalContent">
+            
+            <div class="p-6 flex items-center justify-between border-b border-gray-100 shrink-0">
+                <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2"><i class="ph-fill ph-users text-agro-500 text-2xl"></i> Selecionar Produtor</h2>
+                <button onclick="fecharModalBusca()" class="text-gray-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-xl"><i class="ph-bold ph-x text-xl"></i></button>
+            </div>
+
+            <div class="p-4 bg-gray-50 border-b border-gray-100 shrink-0">
+                <div class="relative max-w-lg mx-auto">
+                    <i class="ph ph-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    <input type="text" id="inputPesquisaModal" onkeyup="filtrarTabelaModal()" placeholder="Pesquise por nome, CPF ou CNPJ..." class="w-full bg-white border border-gray-200 rounded-xl pl-12 pr-4 py-3 focus:border-agro-500 text-sm">
+                </div>
+            </div>
+
+            <div class="overflow-auto flex-1 p-0">
+                <table class="w-full text-left border-collapse whitespace-nowrap">
+                    <thead class="sticky top-0 bg-gray-100 shadow-sm z-10">
+                        <tr class="text-gray-500 text-xs uppercase"><th class="p-4">Nome do Produtor</th><th class="p-4">CPF / CNPJ</th><th class="p-4 text-center">Ação</th></tr>
+                    </thead>
+                    <tbody id="listaProdutoresModalBody" class="text-gray-700 text-sm"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        let db = null; let produtorAtual = null; let listaProdutoresCache = [];
+
+        function inicializarFirebase() {
+            const clustersSalvos = localStorage.getItem('agrofortis_firebase_clusters');
+            if (clustersSalvos && JSON.parse(clustersSalvos).length > 0) {
+                try { firebase.initializeApp(JSON.parse(clustersSalvos)[0]); db = firebase.firestore(); } catch (error) {}
+            }
+        }
+        inicializarFirebase();
+
+        async function salvarProdutor() {
+            if (!db) return alert("Firebase não conectado.");
+            const nome = document.getElementById('prodNome').value.trim();
+            const cpf = document.getElementById('prodCpf').value.trim();
+            const comissaoGeral = document.getElementById('prodComissao').value;
+            if (!nome || !cpf) return alert("Nome e CPF/CNPJ são obrigatórios.");
+
+            const nomeUsuarioLogado = localStorage.getItem('agrofortis_user_name') || 'Admin';
+            
+            const dados = { 
+                nome, 
+                cpfCnpj: cpf, 
+                comissaoGeral: comissaoGeral ? parseFloat(comissaoGeral) : 0,
+                registradoPor: nomeUsuarioLogado
+            };
+            
+            try {
+                if (produtorAtual && produtorAtual.id) {
+                    await db.collection("produtores").doc(produtorAtual.id).update(dados);
+                    produtorAtual.nome = nome; produtorAtual.cpfCnpj = cpf; produtorAtual.comissaoGeral = dados.comissaoGeral;
+                    alert("Dados do produtor atualizados!");
+                } else {
+                    dados.produtos = []; dados.dataCriacao = firebase.firestore.FieldValue.serverTimestamp();
+                    const docRef = await db.collection("produtores").add(dados);
+                    produtorAtual = { id: docRef.id, ...dados };
+                    alert("Novo produtor cadastrado com sucesso!");
+                }
+                ativarPainelFrutas();
+            } catch (erro) { alert("Erro ao salvar produtor."); }
+        }
+
+        function limparProdutor() {
+            document.getElementById('prodNome').value = ""; document.getElementById('prodCpf').value = ""; document.getElementById('prodComissao').value = "";
+            produtorAtual = null; document.getElementById('painelFrutas').classList.add('hidden');
+        }
+
+        const modalBusca = document.getElementById('modalBusca'); const modalContent = document.getElementById('modalContent');
+        async function abrirModalBusca() {
+            modalBusca.classList.remove('hidden');
+            setTimeout(() => { modalBusca.classList.remove('opacity-0'); modalContent.classList.remove('scale-95'); }, 10);
+            await carregarProdutoresNoModal();
+        }
+        function fecharModalBusca() {
+            modalBusca.classList.add('opacity-0'); modalContent.classList.add('scale-95');
+            setTimeout(() => modalBusca.classList.add('hidden'), 300);
+        }
+
+        async function carregarProdutoresNoModal() {
+            const tbody = document.getElementById('listaProdutoresModalBody');
+            if (!db) return;
+            try {
+                const snapshot = await db.collection("produtores").orderBy("nome", "asc").get();
+                tbody.innerHTML = ""; listaProdutoresCache = [];
+                snapshot.forEach(doc => {
+                    const prod = { id: doc.id, ...doc.data() };
+                    listaProdutoresCache.push(prod);
+                    const tr = document.createElement('tr'); tr.className = "linha-modal hover:bg-green-50/50 border-b";
+                    tr.innerHTML = `<td class="p-4 font-bold text-gray-800">${prod.nome}</td><td class="p-4 text-gray-600">${prod.cpfCnpj}</td><td class="p-4 text-center"><button onclick="selecionarProdutorModal('${prod.id}')" class="bg-agro-100 text-agro-700 font-semibold py-1.5 px-4 rounded-lg">Selecionar</button></td>`;
+                    tbody.appendChild(tr);
+                });
+            } catch (erro) {}
+        }
+
+        function filtrarTabelaModal() {
+            const termo = document.getElementById('inputPesquisaModal').value.toLowerCase();
+            document.querySelectorAll('.linha-modal').forEach(linha => { linha.style.display = linha.innerText.toLowerCase().includes(termo) ? '' : 'none'; });
+        }
+
+        function selecionarProdutorModal(id) {
+            const prod = listaProdutoresCache.find(p => p.id === id);
+            if (prod) {
+                produtorAtual = prod; document.getElementById('prodNome').value = prod.nome; document.getElementById('prodCpf').value = prod.cpfCnpj; document.getElementById('prodComissao').value = prod.comissaoGeral || "";
+                ativarPainelFrutas(); fecharModalBusca();
+            }
+        }
+
+        function ativarPainelFrutas() {
+            document.getElementById('nomeProdutorSelecionado').textContent = produtorAtual.nome;
+            document.getElementById('painelFrutas').classList.remove('hidden');
+            renderizarListaFrutas();
+        }
+
+        function renderizarListaFrutas() {
+            const tbody = document.getElementById('tabelaFrutasProdutor'); tbody.innerHTML = "";
+            const produtos = produtorAtual.produtos || [];
+            produtos.forEach((fruta, index) => {
+                const tr = document.createElement('tr'); tr.className = "border-b border-gray-100 hover:bg-gray-50";
+                tr.innerHTML = `<td class="px-4 py-3 font-bold">${fruta.nome}</td><td class="px-4 py-3">${fruta.tipo}</td><td class="px-4 py-3">${fruta.embalagem}</td><td class="px-4 py-3">${fruta.peso}</td><td class="px-4 py-3 text-agro-600">${fruta.taxa ? fruta.taxa + '%' : '-'}</td><td class="px-4 py-3 text-center"><button type="button" onclick="removerFrutaDoBanco(${index})" class="text-red-400 bg-red-50 p-1.5 rounded-md"><i class="ph-bold ph-trash"></i></button></td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function adicionarFrutaAoBanco() {
+            if (!produtorAtual) return;
+            const nome = document.getElementById('frutaNome').value.trim(); const tipo = document.getElementById('frutaTipo').value.trim(); const embalagem = document.getElementById('frutaEmbalagem').value.trim(); const peso = document.getElementById('frutaPeso').value.trim(); const taxa = document.getElementById('frutaTaxa').value;
+            if (!nome || !tipo || !embalagem || !peso) return alert("Preencha as informações básicas.");
+            const novaFruta = { nome, tipo, embalagem, peso, taxa: taxa ? parseFloat(taxa) : 0 };
+            const produtosAtualizados = produtorAtual.produtos ? [...produtorAtual.produtos] : []; produtosAtualizados.push(novaFruta);
+            try {
+                await db.collection("produtores").doc(produtorAtual.id).update({ produtos: produtosAtualizados });
+                produtorAtual.produtos = produtosAtualizados; renderizarListaFrutas();
+                document.getElementById('frutaNome').value = ""; document.getElementById('frutaTipo').value = ""; document.getElementById('frutaEmbalagem').value = ""; document.getElementById('frutaPeso').value = ""; document.getElementById('frutaTaxa').value = "";
+            } catch (erro) { alert("Erro ao salvar fruta."); }
+        }
+
+        async function removerFrutaDoBanco(index) {
+            if (!produtorAtual || !confirm("Remover esta fruta?")) return;
+            const produtosAtualizados = [...produtorAtual.produtos]; produtosAtualizados.splice(index, 1);
+            try {
+                await db.collection("produtores").doc(produtorAtual.id).update({ produtos: produtosAtualizados });
+                produtorAtual.produtos = produtosAtualizados; renderizarListaFrutas();
+            } catch (erro) {}
+        }
+    </script>
+</body>
+</html>

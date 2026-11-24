@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agrofortis - Relatório de Cargas</title>
+    
+    <!-- BLINDAGEM NUCLEAR PARA PÁGINAS PROTEGIDAS -->
+    <script>
+        function blindagemTotal() {
+            const auth = localStorage.getItem('agrofortis_auth');
+            const perms = JSON.parse(localStorage.getItem('agrofortis_user_perms') || '{}');
+            if (auth !== 'true') {
+                document.documentElement.style.display = 'none';
+                window.location.replace('index.html');
+            } else if (perms.relatorios !== true) {
+                document.documentElement.style.display = 'none';
+                window.location.replace('sistema.html');
+            }
+        }
+        blindagemTotal();
+        setInterval(blindagemTotal, 500);
+
+        window.history.pushState(null, null, window.location.href);
+        window.addEventListener('popstate', function () { window.history.go(1); });
+    </script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <script>
+        tailwind.config = { theme: { extend: { colors: { agro: { 500: '#16a34a', 600: '#15803d', 700: '#115e59' } } } } }
+    </script>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center relative font-sans p-4">
+    <div class="fixed inset-0 z-0 bg-[url('https://images.unsplash.com/photo-1625246333195-78d9c38ad449?q=80&w=1920&auto=format&fit=crop')] bg-cover bg-center">
+        <div class="absolute inset-0 bg-gray-900/95 backdrop-blur-sm"></div>
+    </div>
+
+    <main class="z-10 w-full max-w-7xl flex flex-col items-center my-8">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="bg-white/10 p-3 rounded-xl border border-white/20 shadow-lg backdrop-blur-md">
+                <i class="ph-fill ph-chart-bar text-4xl text-blue-400"></i>
+            </div>
+            <h1 class="text-3xl font-bold tracking-wide text-white">Agro<span class="text-agro-500">fortis</span></h1>
+        </div>
+
+        <div class="bg-white w-full rounded-3xl shadow-2xl p-6 md:p-8 border border-gray-100 relative">
+            
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-gray-200 pb-6 mb-6 gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                        <i class="ph-fill ph-chart-line-up text-blue-500"></i> Relatório Financeiro (Por Cliente)
+                    </h2>
+                    <p class="text-gray-500 text-sm mt-1">Selecione o período para visualizar faturamento, volumes e comissões.</p>
+                </div>
+                
+                <div class="flex flex-col sm:flex-row items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-inner">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-gray-500 uppercase tracking-wide">De:</span>
+                        <input type="date" id="dataInicio" class="bg-white border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-gray-700 font-bold focus:outline-none focus:border-blue-500 cursor-pointer">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-gray-500 uppercase tracking-wide">Até:</span>
+                        <input type="date" id="dataFim" class="bg-white border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-gray-700 font-bold focus:outline-none focus:border-blue-500 cursor-pointer">
+                    </div>
+                    <button onclick="gerarRelatorio()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-1.5 px-4 rounded-lg transition-colors flex items-center gap-2 shadow-md">
+                        <i class="ph-bold ph-magnifying-glass"></i> Filtrar
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8" id="cardsResumo">
+                <div class="bg-gray-800 rounded-2xl p-5 border border-gray-700 flex flex-col justify-center shadow-md">
+                    <span class="text-gray-400 text-xs font-bold uppercase tracking-wide mb-1 flex items-center gap-1"><i class="ph-bold ph-wallet"></i> Faturamento Final (Cliente)</span>
+                    <span class="text-3xl font-black text-white" id="resumoBruto">R$ 0,00</span>
+                </div>
+                <div class="bg-green-50 rounded-2xl p-5 border border-green-200 flex flex-col justify-center shadow-sm">
+                    <span class="text-green-700 text-xs font-bold uppercase tracking-wide mb-1 flex items-center gap-1"><i class="ph-bold ph-package"></i> Volume Transportado</span>
+                    <span class="text-3xl font-black text-green-900" id="resumoVolumes">0 Cx</span>
+                </div>
+                <div class="bg-blue-50 rounded-2xl p-5 border border-blue-200 flex flex-col justify-center shadow-sm">
+                    <span class="text-blue-700 text-xs font-bold uppercase tracking-wide mb-1 flex items-center gap-1"><i class="ph-bold ph-money"></i> Nossa Comissão (Agrofortis)</span>
+                    <span class="text-3xl font-black text-blue-700" id="resumoComissao">R$ 0,00</span>
+                </div>
+            </div>
+
+            <div id="containerRelatorio" class="flex flex-col gap-8">
+                <div class="text-center text-gray-400 py-10 italic">Defina o período e clique em Filtrar para gerar o relatório...</div>
+            </div>
+
+        </div>
+        
+        <a href="sistema.html" class="mt-6 text-white/80 hover:text-white flex items-center gap-2 text-sm font-medium transition-colors bg-black/30 hover:bg-black/50 px-6 py-3 rounded-full border border-white/10 backdrop-blur-md">
+            <i class="ph-bold ph-arrow-left"></i> Voltar ao Painel Principal
+        </a>
+    </main>
+
+    <!-- Firebase Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        let db = null;
+        const formatarMoeda = (valor) => Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+        function inicializarFirebase() {
+            const clustersSalvos = localStorage.getItem('agrofortis_firebase_clusters');
+            if (clustersSalvos && JSON.parse(clustersSalvos).length > 0) {
+                try {
+                    firebase.initializeApp(JSON.parse(clustersSalvos)[0]);
+                    db = firebase.firestore();
+                    
+                    const hoje = new Date(); const offset = hoje.getTimezoneOffset() * 60000;
+                    const dataFormatada = (new Date(hoje - offset)).toISOString().split('T')[0];
+                    
+                    document.getElementById('dataInicio').value = dataFormatada; document.getElementById('dataFim').value = dataFormatada;
+                    gerarRelatorio();
+                } catch (error) {}
+            }
+        }
+        window.onload = inicializarFirebase;
+
+        async function gerarRelatorio() {
+            if (!db) return;
+            const dataInicioStr = document.getElementById('dataInicio').value; const dataFimStr = document.getElementById('dataFim').value; const container = document.getElementById('containerRelatorio');
+            if (!dataInicioStr || !dataFimStr) return alert("Por favor, selecione as datas.");
+            container.innerHTML = `<div class="text-center text-gray-500 py-10"><i class="ph-bold ph-spinner animate-spin text-3xl mb-2 inline-block"></i><br>Buscando e processando relatório...</div>`;
+
+            try {
+                const snapshot = await db.collection("cargas").orderBy("dataCriacao", "desc").limit(1000).get();
+                const dadosPorCliente = {}; let totalBrutoGeral = 0; let totalVolumesGeral = 0; let totalComissaoGeral = 0;
+
+                snapshot.forEach(doc => {
+                    const carga = { id: doc.id, ...doc.data() };
+                    if (carga.dataCriacao) {
+                        const date = carga.dataCriacao.toDate ? carga.dataCriacao.toDate() : new Date(carga.dataCriacao);
+                        const offset = date.getTimezoneOffset() * 60000;
+                        const dataLocalISO = new Date(date - offset).toISOString().split('T')[0];
+                        
+                        if (dataLocalISO >= dataInicioStr && dataLocalISO <= dataFimStr) {
+                            const cliId = carga.clienteId;
+                            if (!dadosPorCliente[cliId]) { dadosPorCliente[cliId] = { nomeCliente: carga.clienteNome, notasFiscais: new Set(), totalVolumes: 0, totalDinheiro: 0, totalComissaoCliente: 0, totalLiquidoProdutores: 0, cargas: [] }; }
+                            if(carga.notaFiscal) dadosPorCliente[cliId].notasFiscais.add(carga.notaFiscal);
+                            
+                            dadosPorCliente[cliId].totalVolumes += carga.totalCaixas; dadosPorCliente[cliId].totalDinheiro += (carga.valorTotal || 0);
+
+                            let comissaoDestaCarga = carga.totalComissao !== undefined ? carga.totalComissao : 0;
+                            let liquidoProdutoresCarga = carga.totalLiquidoProdutor !== undefined ? carga.totalLiquidoProdutor : 0;
+                            if (carga.totalComissao === undefined) { carga.itens.forEach(item => { if(!item.isBonificacao) { const taxa = item.taxaComissao || 0; const comissaoItem = item.valorComissao !== undefined ? item.valorComissao : (item.subtotal * (taxa / 100)); comissaoDestaCarga += comissaoItem; liquidoProdutoresCarga += (item.liquidoProdutor !== undefined ? item.liquidoProdutor : (item.subtotal - comissaoItem)); } }); }
+
+                            dadosPorCliente[cliId].totalComissaoCliente += comissaoDestaCarga; dadosPorCliente[cliId].totalLiquidoProdutores += liquidoProdutoresCarga;
+
+                            dadosPorCliente[cliId].cargas.push({ dataExibicao: date.toLocaleDateString('pt-BR'), produtorNome: carga.produtorNome || "Fornecedor", itens: carga.itens, nf: carga.notaFiscal, subtotalBrutoCarga: carga.subtotal, totalComissaoCarga: comissaoDestaCarga, totalLiquidoProdutorCarga: liquidoProdutoresCarga, percDesconto: carga.percDesconto, valorDesconto: carga.valorDesconto, valorFinalVenda: carga.valorTotal });
+
+                            totalBrutoGeral += (carga.valorTotal || 0); totalVolumesGeral += carga.totalCaixas; totalComissaoGeral += comissaoDestaCarga;
+                        }
+                    }
+                });
+
+                document.getElementById('resumoBruto').innerText = formatarMoeda(totalBrutoGeral); document.getElementById('resumoVolumes').innerText = totalVolumesGeral + " Cx"; document.getElementById('resumoComissao').innerText = formatarMoeda(totalComissaoGeral);
+                const clientesAgrupados = Object.values(dadosPorCliente); clientesAgrupados.sort((a, b) => a.nomeCliente.localeCompare(b.nomeCliente));
+
+                if (clientesAgrupados.length === 0) { container.innerHTML = `<div class="text-center text-gray-500 py-10 font-bold bg-gray-50 rounded-xl border border-gray-200">Nenhum movimento registrado neste período.</div>`; return; }
+
+                container.innerHTML = ""; 
+                clientesAgrupados.forEach(clienteInfo => {
+                    const NFs_formatadas = Array.from(clienteInfo.notasFiscais).join(', ') || 'Nenhuma';
+                    let tabelaItensHTML = '';
+                    
+                    clienteInfo.cargas.forEach(c => {
+                        tabelaItensHTML += `<tr class="bg-gray-100 border-t-2 border-b-2 border-gray-300"><td colspan="5" class="py-3 px-3 text-xs tracking-wide border-r border-gray-300"><div class="flex justify-between items-center"><div class="flex items-center gap-3"><span class="font-bold text-gray-700 flex items-center gap-1"><i class="ph-bold ph-calendar text-blue-600 text-sm"></i> ${c.dataExibicao}</span><span class="text-gray-300">|</span><span class="bg-green-100 text-green-800 border border-green-300 rounded px-2 py-0.5 text-[10px] font-black uppercase shadow-sm">FORNECEDOR(ES) DESTA CARGA</span><span class="font-black text-gray-900 text-sm uppercase">${c.produtorNome}</span></div><span class="bg-yellow-100 text-yellow-900 border border-yellow-300 rounded px-2 py-1 shadow-sm font-mono text-sm tracking-wider uppercase font-bold">NF: ${c.nf || '-'}</span></div></td></tr>`;
+                        c.itens.forEach(item => {
+                            const badge = item.isBonificacao ? `<span class="bg-blue-100 text-blue-700 text-[9px] font-bold px-1.5 py-0.5 rounded ml-2 uppercase">Bonif</span>` : '';
+                            const valorComissao = item.valorComissao !== undefined ? item.valorComissao : (item.subtotal * ((item.taxaComissao || 0)/100));
+                            const comissaoInfoStr = item.isBonificacao ? '-' : `${item.taxaComissao || 0}% <br><span class="text-[9px] text-gray-500 font-normal">(${formatarMoeda(valorComissao)})</span>`;
+                            const liquidoStr = item.isBonificacao ? '-' : formatarMoeda(item.liquidoProdutor !== undefined ? item.liquidoProdutor : (item.subtotal - valorComissao));
+                            tabelaItensHTML += `<tr class="text-gray-700 text-xs hover:bg-gray-50"><td class="py-2 px-3 border border-gray-200"><span class="font-medium">${item.nome} (${item.tipo}) ${badge}</span>${item.produtorNome ? `<span class="block text-[9px] text-gray-500 font-bold uppercase mt-0.5">Prod: ${item.produtorNome}</span>` : ''}</td><td class="py-2 px-3 text-center border border-gray-200">${item.quantidade}</td><td class="py-2 px-3 text-right font-bold text-gray-800 border border-gray-200">${formatarMoeda(item.subtotal)}</td><td class="py-1 px-3 text-center font-bold text-blue-700 border border-gray-200 bg-blue-50/30">${comissaoInfoStr}</td><td class="py-2 px-3 text-right font-bold text-green-700 border border-gray-200 bg-green-50/50">${liquidoStr}</td></tr>`;
+                        });
+
+                        tabelaItensHTML += `<tr class="text-gray-900 text-xs bg-gray-50/80"><td colspan="2" class="py-1.5 px-3 text-right text-gray-500 font-bold uppercase text-[10px] border border-gray-200">TOTAIS DESTA CARGA:</td><td class="py-1.5 px-3 text-right text-gray-600 font-black border border-gray-200"><span class="block text-[8px] uppercase">Bruto da Carga</span>${formatarMoeda(c.subtotalBrutoCarga)}</td><td class="py-1.5 px-3 text-center text-blue-700 font-black border border-gray-200 bg-blue-50/50"><span class="block text-[8px] uppercase">Nossa Comis.</span>${formatarMoeda(c.totalComissaoCarga)}</td><td class="py-1.5 px-3 text-right text-green-700 font-black border border-gray-200 bg-green-50/50"><span class="block text-[8px] uppercase">Pagar Fornecedores</span>${formatarMoeda(c.totalLiquidoProdutorCarga)}</td></tr>`;
+                        if (c.percDesconto && c.percDesconto > 0) { tabelaItensHTML += `<tr class="text-red-700 text-xs bg-red-50/50"><td colspan="2" class="py-1.5 px-3 text-right font-bold uppercase text-[10px] border border-red-200">Desconto (${c.percDesconto}% aplicado ao Cliente):</td><td class="py-1.5 px-3 text-right font-bold border border-red-200">- ${formatarMoeda(c.valorDesconto)}</td><td colspan="2" class="border border-red-200 bg-red-50/50"></td></tr><tr class="text-gray-900 text-xs bg-gray-200/50"><td colspan="2" class="py-1.5 px-3 text-right text-gray-800 font-black uppercase text-[10px] border border-gray-300">Total Pago Pelo Cliente:</td><td class="py-1.5 px-3 text-right text-gray-800 font-black border border-gray-300">${formatarMoeda(c.valorFinalVenda)}</td><td colspan="2" class="border border-gray-300 bg-gray-200/50"></td></tr>`; }
+                    });
+
+                    container.innerHTML += `<div class="bg-white border border-gray-300 rounded-xl overflow-hidden shadow-sm"><div class="bg-gray-800 p-4 border-b-4 border-agro-500 flex flex-col md:flex-row md:items-start justify-between gap-4"><div class="flex flex-col"><span class="bg-blue-100 text-blue-800 text-[10px] font-black uppercase px-2 py-0.5 rounded w-max mb-1 shadow-sm tracking-wider">CLIENTE DESTINO</span><h3 class="text-2xl font-black text-white flex items-center gap-2"><i class="ph-fill ph-storefront text-agro-400"></i> ${clienteInfo.nomeCliente}</h3><p class="text-gray-400 text-xs mt-2">NFs no Período: <span class="bg-gray-700 text-yellow-400 border border-gray-600 rounded px-2 py-0.5 font-mono shadow-sm tracking-wider uppercase ml-1">${NFs_formatadas}</span></p></div><div class="flex flex-wrap items-center gap-4 sm:gap-6 bg-gray-900 p-3 rounded-lg border border-gray-700 self-center"><div class="text-center sm:text-right"><span class="block text-[10px] text-gray-400 uppercase font-bold">Total Faturado Cliente</span><span class="block text-xl font-black text-gray-100">${formatarMoeda(clienteInfo.totalDinheiro)}</span></div><div class="h-8 border-r border-gray-700 hidden sm:block"></div><div class="text-center sm:text-right"><span class="block text-[10px] text-gray-400 uppercase font-bold">Nossa Comissão</span><span class="block text-xl font-black text-blue-400">${formatarMoeda(clienteInfo.totalComissaoCliente)}</span></div><div class="h-8 border-r border-gray-700 hidden sm:block"></div><div class="text-center sm:text-right"><span class="block text-[10px] text-gray-400 uppercase font-bold">Total Pagar Produtor</span><span class="block text-xl font-black text-green-400">${formatarMoeda(clienteInfo.totalLiquidoProdutores)}</span></div><div class="h-8 border-r border-gray-700 hidden sm:block"></div><div class="text-center sm:text-right"><span class="block text-[10px] text-gray-400 uppercase font-bold">Volumes</span><span class="block text-xl font-black text-white">${clienteInfo.totalVolumes} <span class="text-xs text-gray-400">Cx</span></span></div></div></div><div class="overflow-x-auto p-4 bg-gray-50"><table class="w-full text-left border-collapse border border-gray-300 bg-white"><thead class="bg-gray-200 border-b-2 border-gray-300 text-gray-700 text-[10px] uppercase tracking-wider"><tr><th class="py-2.5 px-3 font-bold border border-gray-300">Descrição do Item</th><th class="py-2.5 px-3 font-bold text-center border border-gray-300 w-24">Vol (Cx)</th><th class="py-2.5 px-3 font-bold text-right border border-gray-300 w-32">Subtotal Bruto</th><th class="py-2.5 px-3 font-bold text-center bg-blue-100/50 border border-gray-300 w-24">Comissão</th><th class="py-2.5 px-3 font-bold text-right bg-green-100/50 border border-gray-300 w-32 text-green-800">Líquido Produtor</th></tr></thead><tbody>${tabelaItensHTML}</tbody></table></div></div>`;
+                });
+            } catch (e) {}
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agrofortis - Painel Principal</title>
+    
+    <!-- BLINDAGEM NUCLEAR PARA PÁGINAS PROTEGIDAS -->
+    <script>
+        function blindagemTotal() {
+            if (localStorage.getItem('agrofortis_auth') !== 'true') {
+                document.documentElement.style.display = 'none';
+                window.location.replace('index.html');
+            }
+        }
+        blindagemTotal();
+        setInterval(blindagemTotal, 500);
+
+        // Se o usuário clicar em voltar, joga para frente novamente
+        window.history.pushState(null, null, window.location.href);
+        window.addEventListener('popstate', function () {
+            window.history.go(1);
+        });
+    </script>
+
+    <!-- Tailwind CSS e Icons -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <script>
+        function sairDoSistema() {
+            localStorage.removeItem('agrofortis_auth');
+            localStorage.removeItem('agrofortis_user_name');
+            localStorage.removeItem('agrofortis_user_perms');
+            window.location.replace('index.html');
+        }
+
+        tailwind.config = {
+            theme: { extend: { colors: { agro: { 500: '#16a34a', 600: '#15803d', 700: '#115e59' } } } }
+        }
+    </script>
+</head>
+<body class="bg-gray-100 flex h-screen overflow-hidden font-sans relative">
+
+    <aside class="w-72 bg-gray-900 text-white flex flex-col shadow-2xl z-20 transition-transform transform md:translate-x-0 -translate-x-full fixed md:relative h-full" id="sidebar">
+        <div class="p-6 flex items-center gap-3 border-b border-gray-800 shrink-0">
+            <i class="ph-fill ph-plant text-3xl text-agro-500"></i>
+            <h1 class="text-2xl font-bold tracking-wide">Agro<span class="text-agro-500">fortis</span></h1>
+        </div>
+
+        <div class="flex-1 p-6 flex flex-col gap-4 overflow-y-auto">
+            <p class="text-gray-400 text-sm font-semibold mb-2 uppercase tracking-wider">Acesso ao Sistema</p>
+              
+            <a href="usuarios.html" class="flex items-center gap-4 bg-gray-800 hover:bg-purple-600 border border-gray-700 hover:border-purple-500 transition-all duration-300 rounded-xl p-4 group" id="link-usuarios">
+                <div class="bg-gray-700 group-hover:bg-purple-700 p-2 rounded-lg transition-colors">
+                    <i class="ph ph-users-three text-2xl text-purple-400 group-hover:text-white"></i>
+                </div>
+                <div>
+                    <span class="block font-semibold text-lg text-gray-100 group-hover:text-white">Usuários</span>
+                    <span class="block text-xs text-gray-400 group-hover:text-purple-100 mt-1">Gerenciar acessos</span>
+                </div>
+            </a>
+
+            <a href="clientes.html" class="flex items-center gap-4 bg-gray-800 hover:bg-agro-600 border border-gray-700 hover:border-agro-500 transition-all duration-300 rounded-xl p-4 group" id="link-clientes">
+                <div class="bg-gray-700 group-hover:bg-agro-700 p-2 rounded-lg transition-colors"><i class="ph ph-user text-2xl text-agro-500 group-hover:text-white"></i></div>
+                <div>
+                    <span class="block font-semibold text-lg text-gray-100 group-hover:text-white">Clientes</span>
+                    <span class="block text-xs text-gray-400 group-hover:text-green-100 mt-1">Acessar área de compras</span>
+                </div>
+            </a>
+
+            <a href="produtor.html" class="flex items-center gap-4 bg-gray-800 hover:bg-agro-600 border border-gray-700 hover:border-agro-500 transition-all duration-300 rounded-xl p-4 group" id="link-produtores">
+                <div class="bg-gray-700 group-hover:bg-agro-700 p-2 rounded-lg transition-colors"><i class="ph ph-tractor text-2xl text-agro-500 group-hover:text-white"></i></div>
+                <div>
+                    <span class="block font-semibold text-lg text-gray-100 group-hover:text-white">Produtor</span>
+                    <span class="block text-xs text-gray-400 group-hover:text-green-100 mt-1">Acessar gestão rural</span>
+                </div>
+            </a>
+            
+            <a href="carga.html" class="flex items-center gap-4 bg-gray-800 hover:bg-agro-600 border border-gray-700 hover:border-agro-500 transition-all duration-300 rounded-xl p-4 group" id="link-cargas">
+                <div class="bg-gray-700 group-hover:bg-agro-700 p-2 rounded-lg transition-colors"><i class="ph ph-truck text-2xl text-agro-500 group-hover:text-white"></i></div>
+                <div>
+                    <span class="block font-semibold text-lg text-gray-100 group-hover:text-white">Cargas</span>
+                    <span class="block text-xs text-gray-400 group-hover:text-green-100 mt-1">Montagem de cargas</span>
+                </div>
+            </a>
+
+            <a href="descarga.html" class="flex items-center gap-4 bg-gray-800 hover:bg-orange-600 border border-gray-700 hover:border-orange-500 transition-all duration-300 rounded-xl p-4 group" id="link-descargas">
+                <div class="bg-gray-700 group-hover:bg-orange-700 p-2 rounded-lg transition-colors"><i class="ph ph-forklift text-2xl text-orange-400 group-hover:text-white"></i></div>
+                <div>
+                    <span class="block font-semibold text-lg text-gray-100 group-hover:text-white">Descargas</span>
+                    <span class="block text-xs text-gray-400 group-hover:text-orange-100 mt-1">Vales e fechamentos</span>
+                </div>
+            </a>
+
+            <a href="relatorio_descarga.html" class="flex items-center gap-4 bg-gray-800 hover:bg-blue-600 border border-gray-700 hover:border-blue-500 transition-all duration-300 rounded-xl p-4 group" id="link-relatorio-qc">
+                <div class="bg-gray-700 group-hover:bg-blue-700 p-2 rounded-lg transition-colors"><i class="ph ph-clipboard-text text-2xl text-blue-400 group-hover:text-white"></i></div>
+                <div>
+                    <span class="block font-semibold text-lg text-gray-100 group-hover:text-white">Inspeção (QC)</span>
+                    <span class="block text-xs text-gray-400 group-hover:text-blue-100 mt-1">Qualidade de Descarga</span>
+                </div>
+            </a>
+
+            <a href="vendas.html" class="flex items-center gap-4 bg-gray-800 hover:bg-teal-600 border border-gray-700 hover:border-teal-500 transition-all duration-300 rounded-xl p-4 group" id="link-vendas">
+                <div class="bg-gray-700 group-hover:bg-teal-700 p-2 rounded-lg transition-colors"><i class="ph ph-shopping-cart text-2xl text-teal-400 group-hover:text-white"></i></div>
+                <div>
+                    <span class="block font-semibold text-lg text-gray-100 group-hover:text-white">Vendas</span>
+                    <span class="block text-xs text-gray-400 group-hover:text-teal-100 mt-1">Painel de catálogo e PDV</span>
+                </div>
+            </a>
+
+            <a href="relatorio.html" class="flex items-center gap-4 bg-gray-800 hover:bg-blue-600 border border-gray-700 hover:border-blue-500 transition-all duration-300 rounded-xl p-4 group" id="link-relatorios">
+                <div class="bg-gray-700 group-hover:bg-blue-700 p-2 rounded-lg transition-colors"><i class="ph ph-chart-bar text-2xl text-blue-400 group-hover:text-white"></i></div>
+                <div>
+                    <span class="block font-semibold text-lg text-gray-100 group-hover:text-white">Relatórios</span>
+                    <span class="block text-xs text-gray-400 group-hover:text-blue-100 mt-1">Painel financeiro de cargas</span>
+                </div>
+            </a>
+            
+            <!-- Botão de Segurança e Backup -->
+            <button onclick="abrirModalControleSeguranca()" class="flex items-center gap-4 bg-gray-800 hover:bg-amber-600 border border-gray-700 hover:border-amber-500 transition-all duration-300 rounded-xl p-4 group text-left mt-6" id="link-seguranca">
+                <div class="bg-gray-700 group-hover:bg-amber-700 p-2 rounded-lg transition-colors"><i class="ph-bold ph-shield-check text-2xl text-amber-400 group-hover:text-white"></i></div>
+                <div>
+                    <span class="block font-semibold text-lg text-gray-100 group-hover:text-white">Segurança & Backup</span>
+                    <span class="block text-xs text-gray-400 group-hover:text-amber-100 mt-1">Servidor e Proteção de Dados</span>
+                </div>
+            </button>
+
+            <button onclick="sairDoSistema()" class="flex items-center gap-4 bg-red-900/30 hover:bg-red-600 border border-red-800/50 hover:border-red-500 transition-all duration-300 rounded-xl p-4 group mt-6 cursor-pointer w-full text-left shrink-0">
+                <div class="bg-red-800/50 group-hover:bg-red-700 p-2 rounded-lg transition-colors"><i class="ph ph-sign-out text-2xl text-red-400 group-hover:text-white"></i></div>
+                <div>
+                    <span class="block font-semibold text-lg text-red-100 group-hover:text-white">Sair do Sistema</span>
+                    <span class="block text-xs text-red-400/80 group-hover:text-red-100 mt-1">Encerrar sessão segura</span>
+                </div>
+            </button>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col relative h-full">
+        <header class="md:hidden flex items-center justify-between p-4 bg-gray-900 text-white shadow-md z-10 relative">
+            <div class="flex items-center gap-2">
+                <i class="ph-fill ph-plant text-2xl text-agro-500"></i>
+                <span class="text-xl font-bold">Agro<span class="text-agro-500">fortis</span></span>
+            </div>
+            <button id="menu-btn" class="text-2xl focus:outline-none p-2 bg-gray-800 rounded-lg"><i class="ph ph-list"></i></button>
+        </header>
+
+        <div class="flex-1 flex items-center justify-center p-8 bg-[url('https://images.unsplash.com/photo-1625246333195-78d9c38ad449?q=80&w=1920&auto=format&fit=crop')] bg-cover bg-center relative">
+            <div class="absolute inset-0 bg-green-950/85 backdrop-blur-sm"></div>
+
+            <div class="z-10 text-center text-white max-w-2xl flex flex-col items-center">
+                <div class="mb-8 p-5 bg-white/10 rounded-full border border-white/20 shadow-xl">
+                    <i class="ph-fill ph-leaf text-6xl text-agro-500"></i>
+                </div>
+                <h2 class="text-4xl md:text-5xl font-bold mb-4">Bem-vindo à Agrofortis</h2>
+                <p class="text-lg text-gray-300 mb-10 leading-relaxed">Conectando a força do campo com inteligência e tecnologia.</p>
+            </div>
+        </div>
+
+        <button id="btnDev" class="absolute bottom-6 right-6 z-20 bg-gray-800 text-gray-400 hover:text-white hover:bg-agro-600 p-4 rounded-full shadow-2xl border border-gray-700 transition-all duration-300 group">
+            <i class="ph-fill ph-gear text-2xl group-hover:rotate-90 transition-transform duration-500"></i>
+        </button>
+    </main>
+
+    <!-- Modal de Senha Dev -->
+    <div id="modalSenha" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+        <div class="bg-gray-900 border border-gray-700 rounded-2xl p-8 w-full max-w-sm shadow-2xl transform transition-all relative">
+            <button id="closeSenha" class="absolute top-4 right-4 text-gray-500 hover:text-white"><i class="ph ph-x text-xl"></i></button>
+            <div class="flex flex-col items-center text-center">
+                <div class="bg-gray-800 p-3 rounded-full text-agro-500 mb-4"><i class="ph-fill ph-lock-key text-3xl"></i></div>
+                <h3 class="text-xl font-bold text-white mb-2">Acesso Restrito</h3>
+                <p class="text-gray-400 text-sm mb-6">Insira a senha de desenvolvedor para configurar os bancos de dados.</p>
+                <input type="password" id="inputSenha" placeholder="Digite a senha" class="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-3 mb-4 focus:outline-none focus:border-agro-500 focus:ring-1 focus:ring-agro-500 transition-all text-center tracking-widest">
+                <p id="erroSenha" class="text-red-500 text-sm mb-4 hidden">Senha incorreta.</p>
+                <button id="btnConfirmarSenha" class="w-full bg-agro-600 hover:bg-agro-500 text-white font-bold py-3 px-4 rounded-lg transition-colors">Desbloquear</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Configuração Bancos -->
+    <div id="modalDb" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+        <div class="bg-gray-900 border border-gray-700 rounded-2xl p-8 w-full max-w-2xl shadow-2xl transform transition-all relative max-h-[90vh] overflow-y-auto">
+            <button id="closeDb" class="absolute top-4 right-4 text-gray-500 hover:text-white"><i class="ph ph-x text-xl"></i></button>
+            <div class="flex items-center gap-3 mb-6">
+                <i class="ph-fill ph-database text-3xl text-agro-500"></i>
+                <h3 class="text-2xl font-bold text-white">Cluster Firebase - Agrofortis</h3>
+            </div>
+            <div class="bg-gray-800/50 p-4 rounded-lg border border-gray-700 mb-6">
+                <p class="text-gray-300 text-sm mb-2"><i class="ph-fill ph-info text-blue-400 mr-1"></i> <strong>Sistema de Failover Ativo:</strong> Adicione múltiplos arquivos JSON do Firebase.</p>
+            </div>
+            <div class="mb-6">
+                <label class="block text-gray-400 text-sm font-semibold mb-2">Cole o JSON de configuração:</label>
+                <textarea id="jsonInput" rows="5" placeholder='{"apiKey": "...", "projectId": "..."}' class="w-full bg-gray-800 border border-gray-700 text-green-400 font-mono text-sm rounded-lg px-4 py-3 mb-3 focus:outline-none focus:border-agro-500"></textarea>
+                <button id="btnAddDb" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-6 rounded-lg transition-colors flex items-center gap-2 border border-gray-600"><i class="ph-bold ph-plus"></i> Adicionar Banco à Fila</button>
+            </div>
+            <div>
+                <h4 class="text-gray-400 text-sm font-semibold mb-3 uppercase tracking-wide border-b border-gray-700 pb-2">Bancos Ativos</h4>
+                <ul id="dbList" class="flex flex-col gap-2"><li class="text-gray-500 text-sm italic py-2" id="emptyState">Nenhum banco configurado.</li></ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Controle de Segurança e Backups -->
+    <div id="modalControleSeguranca" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+        <div class="bg-gray-900 border border-gray-700 rounded-3xl p-8 w-full max-w-5xl shadow-2xl transform transition-all relative max-h-[95vh] overflow-y-auto">
+            <button onclick="fecharModalControleSeguranca()" class="absolute top-6 right-6 text-gray-500 hover:text-white bg-gray-800 p-2 rounded-xl transition-colors"><i class="ph-bold ph-x text-xl"></i></button>
+            
+            <div class="flex items-center gap-4 border-b border-gray-800 pb-6 mb-8">
+                <div class="bg-amber-500/20 p-3 rounded-2xl border border-amber-500/30">
+                    <i class="ph-fill ph-shield-check text-4xl text-amber-500"></i>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-bold text-white">Central de Segurança e Backups</h3>
+                    <p class="text-gray-400 text-sm mt-1">Exporte, restaure e gerencie cópias de segurança de todo o sistema.</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- 1. Backup Automático na Nuvem -->
+                <div class="bg-gray-800 border border-gray-700 rounded-2xl p-6 relative overflow-hidden flex flex-col">
+                    <div class="absolute -right-6 -top-6 text-gray-700/40"><i class="ph-fill ph-cloud text-9xl"></i></div>
+                    <div class="relative z-10 flex-1">
+                        <div class="flex items-center gap-2 mb-4">
+                            <i class="ph-fill ph-clock-counter-clockwise text-xl text-blue-400"></i>
+                            <h4 class="text-lg font-bold text-white">Backup Automático</h4>
+                        </div>
+                        <p class="text-xs text-gray-400 mb-6 leading-relaxed">
+                            O backup do Agrofortis opera na nuvem através do <strong class="text-blue-400">Google Cloud Scheduler</strong>. Mesmo com o sistema fechado, 100% dos dados são salvos diariamente.
+                        </p>
+                        <div class="bg-gray-900 p-4 rounded-xl border border-gray-700 mb-6">
+                            <div class="flex justify-between items-center mb-2 text-[10px] text-gray-500 uppercase font-bold tracking-wide"><span>Status Nuvem</span><span class="text-green-500 flex items-center gap-1"><i class="ph-fill ph-check-circle"></i> Ativo</span></div>
+                            <div class="flex justify-between items-center text-xs font-semibold text-gray-300"><span>Agendamento:</span><span class="text-white">Diário, 02h00</span></div>
+                        </div>
+                    </div>
+                    <div class="relative z-10 pt-4 mt-auto border-t border-gray-700">
+                        <a href="https://console.cloud.google.com/cloudscheduler" target="_blank" class="w-full flex justify-center bg-gray-700 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-xl transition-colors text-sm">Abrir Google Cloud</a>
+                    </div>
+                </div>
+
+                <!-- 2. Exportação Manual Instantânea -->
+                <div class="bg-gray-800 border border-gray-700 rounded-2xl p-6 relative flex flex-col">
+                    <div class="relative z-10 flex-1">
+                        <div class="flex items-center gap-2 mb-4">
+                            <i class="ph-fill ph-download-simple text-xl text-amber-500"></i>
+                            <h4 class="text-lg font-bold text-white">Exportar Backup</h4>
+                        </div>
+                        <p class="text-xs text-gray-400 mb-6 leading-relaxed">
+                            Gere e baixe uma cópia completa (`.JSON`) de todas as coleções do banco de dados ativo para o seu computador.
+                        </p>
+                        
+                        <div class="space-y-2 mb-6 text-xs">
+                            <div class="flex items-center justify-between bg-gray-900 px-3 py-2.5 rounded-lg border border-gray-700">
+                                <span class="text-gray-300 font-bold">Cadastros Base</span>
+                                <span class="bg-gray-700 text-gray-300 px-2 py-0.5 rounded text-[10px]">Usuários / Cli / Prod</span>
+                            </div>
+                            <div class="flex items-center justify-between bg-gray-900 px-3 py-2.5 rounded-lg border border-gray-700">
+                                <span class="text-gray-300 font-bold">Operacional</span>
+                                <span class="bg-gray-700 text-gray-300 px-2 py-0.5 rounded text-[10px]">Cargas / Descargas / QC</span>
+                            </div>
+                            <div class="flex items-center justify-between bg-gray-900 px-3 py-2.5 rounded-lg border border-gray-700">
+                                <span class="text-gray-300 font-bold">Comercial e Frota</span>
+                                <span class="bg-gray-700 text-gray-300 px-2 py-0.5 rounded text-[10px]">Vendas / Caminhões</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="relative z-10 pt-4 mt-auto border-t border-gray-700">
+                        <button onclick="realizarBackupManual()" id="btnExtrairBanco" class="w-full flex justify-center items-center gap-2 bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-lg shadow-amber-900/20 text-sm">
+                            <i class="ph-bold ph-download-simple"></i> Baixar Backup (.JSON)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 3. Importação / Restauração de Backup -->
+                <div class="bg-gray-800 border border-gray-700 rounded-2xl p-6 relative flex flex-col">
+                    <div class="relative z-10 flex-1">
+                        <div class="flex items-center gap-2 mb-4">
+                            <i class="ph-fill ph-upload-simple text-xl text-green-400"></i>
+                            <h4 class="text-lg font-bold text-white">Restaurar Backup</h4>
+                        </div>
+                        <p class="text-xs text-gray-400 mb-4 leading-relaxed">
+                            Selecione um arquivo <strong class="text-white">Backup_Total_Agrofortis.json</strong> para restaurar todos os dados para o banco ativo.
+                        </p>
+                        
+                        <div class="bg-red-950/40 border border-red-800/60 p-3 rounded-xl mb-4">
+                            <p class="text-[11px] text-red-300 leading-snug">
+                                <i class="ph-bold ph-warning"></i> <strong>Atenção:</strong> Registros com o mesmo ID serão atualizados/sobrescritos com os dados do arquivo importado.
+                            </p>
+                        </div>
+
+                        <label for="inputImportarBackup" class="flex flex-col items-center justify-center w-full h-24 border-2 border-gray-600 border-dashed rounded-xl cursor-pointer bg-gray-900/60 hover:bg-gray-900 hover:border-green-500 transition-colors p-3 text-center">
+                            <i class="ph-bold ph-file-js text-2xl text-green-400 mb-1"></i>
+                            <span id="nomeArquivoImportacao" class="text-xs text-gray-300 font-semibold truncate max-w-full">Clique para escolher o .JSON</span>
+                            <input id="inputImportarBackup" type="file" accept=".json,application/json" class="hidden" onchange="selecionarArquivoBackup(event)">
+                        </label>
+                    </div>
+                    
+                    <div class="relative z-10 pt-4 mt-auto border-t border-gray-700">
+                        <button onclick="executarRestauracaoBackup()" id="btnRestaurarBanco" disabled class="w-full flex justify-center items-center gap-2 bg-green-600 hover:bg-green-500 disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-lg text-sm">
+                            <i class="ph-bold ph-arrows-clockwise"></i> Iniciar Restauração
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        const btnMenu = document.getElementById('menu-btn');
+        const sidebar = document.getElementById('sidebar');
+        btnMenu.addEventListener('click', () => sidebar.classList.toggle('-translate-x-full'));
+
+        const btnDev = document.getElementById('btnDev');
+        const modalSenha = document.getElementById('modalSenha');
+        const modalDb = document.getElementById('modalDb');
+        const inputSenha = document.getElementById('inputSenha');
+        const btnConfirmarSenha = document.getElementById('btnConfirmarSenha');
+        const erroSenha = document.getElementById('erroSenha');
+        const jsonInput = document.getElementById('jsonInput');
+        const btnAddDb = document.getElementById('btnAddDb');
+        const dbList = document.getElementById('dbList');
+        const emptyState = document.getElementById('emptyState');
+
+        let firebaseClusters = JSON.parse(localStorage.getItem('agrofortis_firebase_clusters')) || [];
+        let db = null;
+        let dadosBackupParaImportar = null;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            atualizarListaBancos();
+            if (firebaseClusters.length > 0) {
+                try { 
+                    firebase.initializeApp(firebaseClusters[0]); 
+                    db = firebase.firestore(); 
+                } catch(e) {}
+            }
+        });
+
+        function salvarClustersNoStorage() { localStorage.setItem('agrofortis_firebase_clusters', JSON.stringify(firebaseClusters)); }
+
+        btnDev.addEventListener('click', () => {
+            modalSenha.classList.remove('hidden'); inputSenha.value = ''; erroSenha.classList.add('hidden'); setTimeout(() => inputSenha.focus(), 100);
+        });
+
+        document.getElementById('closeSenha').addEventListener('click', () => modalSenha.classList.add('hidden'));
+        document.getElementById('closeDb').addEventListener('click', () => modalDb.classList.add('hidden'));
+
+        function verificarSenha() {
+            if (inputSenha.value === '22011996') {
+                modalSenha.classList.add('hidden'); modalDb.classList.remove('hidden');
+            } else {
+                erroSenha.classList.remove('hidden'); inputSenha.classList.add('border-red-500');
+            }
+        }
+
+        btnConfirmarSenha.addEventListener('click', verificarSenha);
+        inputSenha.addEventListener('keypress', (e) => { if (e.key === 'Enter') verificarSenha(); });
+        inputSenha.addEventListener('input', () => { erroSenha.classList.add('hidden'); inputSenha.classList.remove('border-red-500'); });
+
+        btnAddDb.addEventListener('click', () => {
+            const rawJson = jsonInput.value.trim(); if (!rawJson) return;
+            try {
+                const config = JSON.parse(rawJson);
+                if (!config.projectId) { alert("JSON não válido."); return; }
+                firebaseClusters.push(config); salvarClustersNoStorage(); jsonInput.value = ''; atualizarListaBancos();
+                window.location.reload();
+            } catch (error) { alert("Erro de sintaxe no JSON."); }
+        });
+
+        function atualizarListaBancos() {
+            emptyState.style.display = firebaseClusters.length > 0 ? 'none' : 'block';
+            dbList.innerHTML = '';
+            firebaseClusters.forEach((dbItem, index) => {
+                const li = document.createElement('li');
+                li.className = "flex items-center justify-between bg-gray-800 border border-gray-700 p-3 rounded-lg";
+                li.innerHTML = `
+                    <div class="flex items-center gap-3"><div class="bg-gray-900 p-2 rounded text-gray-400 font-bold text-xs border border-gray-700">#${index + 1}</div><div><span class="block text-white font-semibold">${dbItem.projectId}</span></div></div>
+                    <button onclick="removerBanco(${index})" class="text-red-500 hover:text-red-400 p-2"><i class="ph-bold ph-trash"></i></button>
+                `;
+                dbList.appendChild(li);
+            });
+        }
+        window.removerBanco = function(index) { firebaseClusters.splice(index, 1); salvarClustersNoStorage(); atualizarListaBancos(); }
+        
+        // SISTEMA DE PERMISSÕES
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                const perms = JSON.parse(localStorage.getItem('agrofortis_user_perms') || '{}');
+                const isAdmin = perms.usuarios === true || perms.backup === true;
+                
+                const esconderBotao = (id) => { const btn = document.getElementById(id); if (btn) btn.style.setProperty('display', 'none', 'important'); };
+
+                if (perms.clientes !== true) esconderBotao('link-clientes');
+                if (perms.produtores !== true) esconderBotao('link-produtores');
+                if (perms.cargas !== true) esconderBotao('link-cargas');
+                if (perms.descargas !== true) esconderBotao('link-descargas');
+                if (perms.inspecaoQC !== true) esconderBotao('link-relatorio-qc');
+                if (perms.vendas !== true) esconderBotao('link-vendas');
+                if (perms.relatorios !== true) esconderBotao('link-relatorios');
+                if (perms.usuarios !== true) esconderBotao('link-usuarios');
+                
+                if (!isAdmin && perms.backup !== true) esconderBotao('link-seguranca');
+
+            } catch (erro) {
+                console.error("Erro ao verificar permissões.", erro);
+            }
+        });
+
+        // ==========================================
+        // FUNÇÕES DE BACKUP E RESTAURAÇÃO
+        // ==========================================
+        const modalSeguranca = document.getElementById('modalControleSeguranca');
+
+        window.abrirModalControleSeguranca = function() {
+            modalSeguranca.classList.remove('hidden');
+        }
+
+        window.fecharModalControleSeguranca = function() {
+            modalSeguranca.classList.add('hidden');
+            // Limpa seleção de arquivo ao fechar
+            document.getElementById('inputImportarBackup').value = '';
+            document.getElementById('nomeArquivoImportacao').innerText = 'Clique para escolher o .JSON';
+            document.getElementById('btnRestaurarBanco').disabled = true;
+            dadosBackupParaImportar = null;
+        }
+
+        const TODAS_COLECOES = [
+            'usuarios',
+            'clientes', 
+            'produtores', 
+            'cargas', 
+            'descargas', 
+            'relatorios_descarga', 
+            'vendas', 
+            'historico_caminhoes',
+            'vales',
+            'relatorios',
+            'configuracoes'
+        ];
+
+        // 1. EXPORTAR BACKUP
+        window.realizarBackupManual = async function() {
+            if (!db) return alert("Erro: Firebase não conectado. Impossível extrair dados.");
+            
+            const btn = document.getElementById('btnExtrairBanco');
+            const textoBotaoOriginal = btn.innerHTML;
+            btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin text-lg"></i> Extraindo 100% dos dados...`;
+            btn.disabled = true;
+
+            const backupData = {};
+
+            try {
+                for (const colecao of TODAS_COLECOES) {
+                    backupData[colecao] = [];
+                    const snapshot = await db.collection(colecao).get();
+                    snapshot.forEach(doc => {
+                        const dados = doc.data();
+                        for (let chave in dados) {
+                            if (dados[chave] && typeof dados[chave].toDate === 'function') {
+                                dados[chave] = { __tipoTimestamp: true, valor: dados[chave].toDate().toISOString() };
+                            }
+                        }
+                        backupData[colecao].push({ id: doc.id, ...dados });
+                    });
+                }
+
+                const jsonStr = JSON.stringify(backupData, null, 2);
+                const blob = new Blob([jsonStr], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                
+                const dataAtual = new Date().toISOString().split('T')[0];
+                const nomeFicheiro = `Backup_Total_Agrofortis_${dataAtual}.json`;
+
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = nomeFicheiro;
+                document.body.appendChild(a);
+                a.click();
+                
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                }, 0);
+
+                alert("Backup concluído com sucesso e arquivo JSON gerado!");
+
+            } catch (error) {
+                console.error("Erro durante o backup manual:", error);
+                alert("Ocorreu um erro ao extrair os dados. Verifique o console.");
+            } finally {
+                btn.innerHTML = textoBotaoOriginal;
+                btn.disabled = false;
+            }
+        }
+
+        // 2. LER ARQUIVO SELECIONADO PARA IMPORTAÇÃO
+        window.selecionarArquivoBackup = function(event) {
+            const file = event.target.files[0];
+            const labelNome = document.getElementById('nomeArquivoImportacao');
+            const btnRestaurar = document.getElementById('btnRestaurarBanco');
+
+            if (!file) {
+                labelNome.innerText = 'Clique para escolher o .JSON';
+                btnRestaurar.disabled = true;
+                dadosBackupParaImportar = null;
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const jsonParsed = JSON.parse(e.target.result);
+                    if (typeof jsonParsed !== 'object' || jsonParsed === null) {
+                        throw new Error("Formato inválido");
+                    }
+
+                    // Conta quantos registros existem no arquivo
+                    let totalRegistros = 0;
+                    Object.keys(jsonParsed).forEach(col => {
+                        if (Array.isArray(jsonParsed[col])) {
+                            totalRegistros += jsonParsed[col].length;
+                        }
+                    });
+
+                    if (totalRegistros === 0) {
+                        alert("O arquivo selecionado está vazio ou não contém registros válidos do Agrofortis.");
+                        btnRestaurar.disabled = true;
+                        return;
+                    }
+
+                    dadosBackupParaImportar = jsonParsed;
+                    labelNome.innerText = `${file.name} (${totalRegistros} registros)`;
+                    btnRestaurar.disabled = false;
+
+                } catch (err) {
+                    alert("Erro ao ler o arquivo: certifique-se de que é um backup .JSON válido do Agrofortis.");
+                    labelNome.innerText = 'Arquivo inválido';
+                    btnRestaurar.disabled = true;
+                    dadosBackupParaImportar = null;
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // 3. EXECUTAR RESTAURAÇÃO NO FIRESTORE
+        window.executarRestauracaoBackup = async function() {
+            if (!db) return alert("Erro: Firebase não conectado.");
+            if (!dadosBackupParaImportar) return alert("Nenhum arquivo de backup válido selecionado.");
+
+            if (!confirm("CONFIRMAÇÃO DE RESTAURAÇÃO:\n\nTem certeza que deseja importar este backup para o banco de dados ativo? Registros existentes com o mesmo ID serão atualizados.")) {
+                return;
+            }
+
+            const btn = document.getElementById('btnRestaurarBanco');
+            const textoOriginal = btn.innerHTML;
+            btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin text-lg"></i> Restaurando banco...`;
+            btn.disabled = true;
+
+            try {
+                let batch = db.batch();
+                let contadorOperacoes = 0;
+                let totalRestaurado = 0;
+
+                const colecoesNoArquivo = Object.keys(dadosBackupParaImportar);
+
+                for (const colecao of colecoesNoArquivo) {
+                    const listaDocs = dadosBackupParaImportar[colecao];
+                    if (!Array.isArray(listaDocs)) continue;
+
+                    for (const item of listaDocs) {
+                        const { id, ...campos } = item;
+                        
+                        // Reconverter datas ISO de volta para Timestamp do Firebase
+                        for (let chave in campos) {
+                            if (campos[chave] && typeof campos[chave] === 'object' && campos[chave].__tipoTimestamp === true) {
+                                campos[chave] = firebase.firestore.Timestamp.fromDate(new Date(campos[chave].valor));
+                            } else if (chave === 'dataCriacao' && typeof campos[chave] === 'string') {
+                                // Compatibilidade com backups gerados antes da tag __tipoTimestamp
+                                const d = new Date(campos[chave]);
+                                if (!isNaN(d.getTime())) {
+                                    campos[chave] = firebase.firestore.Timestamp.fromDate(d);
+                                }
+                            }
+                        }
+
+                        const docRef = id ? db.collection(colecao).doc(id) : db.collection(colecao).doc();
+                        batch.set(docRef, campos, { merge: true });
+                        
+                        contadorOperacoes++;
+                        totalRestaurado++;
+
+                        // O Firebase permite no máximo 500 operações por lote (batch)
+                        if (contadorOperacoes >= 450) {
+                            await batch.commit();
+                            batch = db.batch();
+                            contadorOperacoes = 0;
+                        }
+                    }
+                }
+
+                // Envia o lote restante
+                if (contadorOperacoes > 0) {
+                    await batch.commit();
+                }
+
+                alert(`Restauração concluída com sucesso!\n\nTotal de ${totalRestaurado} registros restaurados em todas as páginas.`);
+                fecharModalControleSeguranca();
+
+            } catch (error) {
+                console.error("Erro ao restaurar backup:", error);
+                alert("Ocorreu um erro durante a restauração: " + error.message);
+            } finally {
+                btn.innerHTML = textoOriginal;
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
